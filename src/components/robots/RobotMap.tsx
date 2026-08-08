@@ -28,7 +28,7 @@ export function RobotMap({ active, robots }: RobotMapProps) {
     mapRef.current?.remove();
     mapRef.current = null;
 
-    const map = L.map(containerRef.current, { zoomControl: false, attributionControl: true }).setView([40.2, -3.5], 5.3);
+    const map = L.map(containerRef.current, { zoomControl: false, attributionControl: true }).setView([40.2, -3.5], 6);
     L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
       attribution: "&copy; OSM &copy; CARTO",
       maxZoom: 19,

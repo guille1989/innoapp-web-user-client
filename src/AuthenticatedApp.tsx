@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { TopBar } from "./components/TopBar";
-import { BottomNav, type AppView } from "./components/BottomNav";
+import type { AppView } from "./components/BottomNav";
 import { Overlay } from "./components/Overlay";
 import { DashboardView } from "./components/dashboard/DashboardView";
 import { WidgetBuilderSheet } from "./components/dashboard/WidgetBuilderSheet";
@@ -12,7 +12,6 @@ import type { ApiAgent, ApiTicket, ApiWidget } from "./api/client";
 import type { BusinessEvent, Robot, Widget } from "./types";
 
 type ActiveSheet = "ai" | "builder" | null;
-
 const VALID_FIELDS = new Set<Widget["field"]>(["event_count", "quantity", "unitPrice", "subtotal", "discount", "tip", "total"]);
 const VALID_GROUPS = new Set<NonNullable<Widget["group"]>>(["port", "status", "parsedBy", "description"]);
 
@@ -36,6 +35,7 @@ function toRobot(agent: ApiAgent): Robot {
   const seen = agent.lastSeenAt ? Date.now() - new Date(agent.lastSeenAt).getTime() : Infinity;
   const status = seen <= 2 * 60_000 ? "online" : seen <= 5 * 60_000 ? "warn" : "offline";
   return {
+    id: agent.agentId,
     name: agent.name,
     store: agent.location?.label ?? "Ubicación sin configurar",
     city: agent.location?.city ?? "",
@@ -73,36 +73,22 @@ export function AuthenticatedApp() {
     });
   }
 
-  function removeWidget(id: string) {
-    void cloud.deleteWidget(id);
-  }
-
   return (
     <div className="app-root">
-      <TopBar onOpenAi={() => setActiveSheet("ai")} />
-
-      <div className="content">
-        {cloud.error && <div className="api-banner">{cloud.error} <button onClick={() => void cloud.refresh()}>Reintentar</button></div>}
-        {cloud.loading && <div className="api-banner">Cargando datos reales…</div>}
-        <DashboardView
-          active={view === "dashboard"}
-          widgets={widgets}
-          events={events}
-          onRemoveWidget={removeWidget}
-          onOpenBuilder={() => setActiveSheet("builder")}
-        />
+      <TopBar active={view} onChange={setView} />
+      <main className="app-stage">
+        {(cloud.error || cloud.loading) && (
+          <div className={`api-banner glass${cloud.error ? " error" : ""}`}>
+            <span className={cloud.loading ? "spinner" : "status-dot"} />
+            {cloud.error ?? "Sincronizando datos reales…"}
+            {cloud.error && <button onClick={() => void cloud.refresh()}>Reintentar</button>}
+          </div>
+        )}
+        <DashboardView active={view === "dashboard"} widgets={widgets} events={events} onRemoveWidget={(id) => void cloud.deleteWidget(id)} onOpenBuilder={() => setActiveSheet("builder")} />
         <RobotsView active={view === "robots"} events={events} latestEventId={latestEventId} robots={robots} codes={cloud.codes} />
-      </div>
-
-      <BottomNav active={view} onChange={setView} />
-
+      </main>
       <Overlay open={activeSheet !== null} onClick={() => setActiveSheet(null)} />
-      <AiSheet
-        open={activeSheet === "ai"}
-        onClose={() => setActiveSheet(null)}
-        events={events}
-        onCreateWidget={addWidget}
-      />
+      <AiSheet open={activeSheet === "ai"} onOpen={() => setActiveSheet("ai")} onClose={() => setActiveSheet(null)} events={events} onCreateWidget={addWidget} />
       <WidgetBuilderSheet open={activeSheet === "builder"} onClose={() => setActiveSheet(null)} onCreate={addWidget} />
     </div>
   );

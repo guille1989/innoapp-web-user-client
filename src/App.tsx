@@ -7,8 +7,9 @@ function App() {
 
   if (status === "loading") {
     return (
-      <div className="login-screen">
-        <div className="page-sub">Cargando...</div>
+      <div className="app-loading">
+        <img src="/brand/innoapp-mark.png" alt="InnoApp" />
+        <span className="spinner" />
       </div>
     );
   }

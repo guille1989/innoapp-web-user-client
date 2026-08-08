@@ -60,6 +60,7 @@ export interface AggregateRow {
 export type RobotStatus = "online" | "warn" | "offline";
 
 export interface Robot {
+  id: string;
   name: string;
   store: string;
   city: string;
