@@ -12,7 +12,7 @@ Copiar `.env.example` a `.env` y completar los outputs del stack CDK:
 VITE_COGNITO_CLIENT_ID=...
 VITE_COGNITO_REGION=us-east-1
 VITE_API_BASE_URL=https://...execute-api.../prod
-VITE_AGENT_DOWNLOAD_URL=https://downloads.example.com/InnoAppAgent-Setup.exe
+VITE_AGENT_DOWNLOAD_URL=/downloads/InnoAppAgent-Setup.exe
 VITE_AGENT_VERSION=0.1.0-pilot
 ```
 
