@@ -1069,3 +1069,17 @@ body {
   background: var(--border);
   border-radius: 8px;
 }
+
+.api-banner {
+  margin: 10px 16px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-muted);
+  background: var(--card);
+  font-size: 12px;
+}
+.api-banner button { margin-left: 8px; color: var(--teal); background: none; border: 0; cursor: pointer; }
+.activation-codes { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 16px 18px; }
+.activation-code { padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--teal); cursor: pointer; }
+.empty-state { display: block; padding: 14px 16px; color: var(--text-dim); font-size: 12px; }

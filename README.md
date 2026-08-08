@@ -1,4 +1,23 @@
-# React + TypeScript + Vite
+# innoapp-web-user-client
+
+Dashboard React/Vite de InnoApp. Usa Cognito para iniciar sesión y la API
+real para tickets, widgets, robots, códigos de activación y datos agregados
+de Athena. Las lecturas se refrescan cada 15 segundos.
+
+## Configuración
+
+Copiar `.env.example` a `.env` y completar los outputs del stack CDK:
+
+```env
+VITE_COGNITO_CLIENT_ID=...
+VITE_COGNITO_REGION=us-east-1
+VITE_API_BASE_URL=https://...execute-api.../prod
+```
+
+`npm run dev` arranca el entorno local; `npm run build` valida TypeScript y
+genera el bundle de producción.
+
+## Base técnica
 
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { TopBar } from "./components/TopBar";
 import { BottomNav, type AppView } from "./components/BottomNav";
 import { Overlay } from "./components/Overlay";
@@ -6,32 +6,75 @@ import { DashboardView } from "./components/dashboard/DashboardView";
 import { WidgetBuilderSheet } from "./components/dashboard/WidgetBuilderSheet";
 import { RobotsView } from "./components/robots/RobotsView";
 import { AiSheet } from "./components/ai/AiSheet";
-import { useEventStream } from "./hooks/useEventStream";
-import type { Widget } from "./types";
+import { useCloudData } from "./hooks/useCloudData";
+import { useAuth } from "./auth/AuthContext";
+import type { ApiAgent, ApiTicket, ApiWidget } from "./api/client";
+import type { BusinessEvent, Robot, Widget } from "./types";
 
 type ActiveSheet = "ai" | "builder" | null;
 
-const INITIAL_WIDGETS: Widget[] = [
-  { id: "w1", type: "kpi", title: "Ventas totales", field: "monto", agg: "sum", group: null },
-  { id: "w2", type: "kpi", title: "Tickets capturados", field: "count", agg: "sum", group: null },
-  { id: "w3", type: "bar", title: "Ventas por sucursal", field: "monto", agg: "sum", group: "store" },
-  { id: "w4", type: "donut", title: "Eventos por tipo", field: "count", agg: "sum", group: "event_type" },
-];
+const VALID_FIELDS = new Set<Widget["field"]>(["event_count", "quantity", "unitPrice", "subtotal", "discount", "tip", "total"]);
+const VALID_GROUPS = new Set<NonNullable<Widget["group"]>>(["port", "status", "parsedBy", "description"]);
 
-let widgetSeq = 5;
+function toEvent(ticket: ApiTicket): BusinessEvent {
+  const date = new Date(ticket.capturedAt);
+  return {
+    id: ticket.ticketId,
+    ts: date.getTime(),
+    timeStr: date.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+    store: "Datos capturados",
+    robot: ticket.port,
+    eventType: "venta",
+    meta: { label: ticket.status, color: "var(--teal)", bg: "var(--teal-dim)" },
+    monto: ticket.total ?? 0,
+    items: ticket.items?.reduce((sum, item) => sum + (item.quantity ?? 0), 0) ?? 0,
+    metodoPago: "Sin dato",
+  };
+}
+
+function toRobot(agent: ApiAgent): Robot {
+  const seen = agent.lastSeenAt ? Date.now() - new Date(agent.lastSeenAt).getTime() : Infinity;
+  const status = seen <= 2 * 60_000 ? "online" : seen <= 5 * 60_000 ? "warn" : "offline";
+  return {
+    name: agent.name,
+    store: agent.location?.label ?? "Ubicación sin configurar",
+    city: agent.location?.city ?? "",
+    lat: agent.location?.lat ?? 40.4168,
+    lng: agent.location?.lng ?? -3.7038,
+    status,
+    meta: agent.lastSeenAt ? `visto ${new Date(agent.lastSeenAt).toLocaleString("es-ES")}` : "sin heartbeat",
+  };
+}
 
 export function AuthenticatedApp() {
+  const { idToken } = useAuth();
   const [view, setView] = useState<AppView>("dashboard");
   const [activeSheet, setActiveSheet] = useState<ActiveSheet>(null);
-  const [widgets, setWidgets] = useState<Widget[]>(INITIAL_WIDGETS);
-  const { events, latestEventId } = useEventStream();
+  const cloud = useCloudData(idToken!);
+  const events = useMemo(() => cloud.tickets.map(toEvent).sort((a, b) => a.ts - b.ts), [cloud.tickets]);
+  const robots = useMemo(() => cloud.agents.map(toRobot), [cloud.agents]);
+  const widgets = useMemo(() => cloud.widgets.map((w: ApiWidget): Widget => ({
+    id: w.widgetId,
+    type: w.visualization,
+    title: w.name,
+    field: VALID_FIELDS.has(w.metric.field as Widget["field"]) ? w.metric.field as Widget["field"] : "event_count",
+    agg: w.metric.aggregation,
+    group: w.groupBy && VALID_GROUPS.has(w.groupBy as NonNullable<Widget["group"]>) ? w.groupBy as Widget["group"] : null,
+    data: cloud.widgetData[w.widgetId]?.map((row) => ({ key: row.label ?? "total", value: row.value })) ?? [],
+  })), [cloud.widgets, cloud.widgetData]);
+  const latestEventId = events.at(-1)?.id ?? null;
 
   function addWidget(cfg: Omit<Widget, "id">) {
-    setWidgets((prev) => [...prev, { ...cfg, id: `w${widgetSeq++}` }]);
+    void cloud.createWidget({
+      name: cfg.title,
+      visualization: cfg.type,
+      metric: { field: cfg.field, aggregation: cfg.field === "event_count" ? "count" : cfg.agg },
+      ...(cfg.group ? { groupBy: cfg.group } : {}),
+    });
   }
 
   function removeWidget(id: string) {
-    setWidgets((prev) => prev.filter((w) => w.id !== id));
+    void cloud.deleteWidget(id);
   }
 
   return (
@@ -39,6 +82,8 @@ export function AuthenticatedApp() {
       <TopBar onOpenAi={() => setActiveSheet("ai")} />
 
       <div className="content">
+        {cloud.error && <div className="api-banner">{cloud.error} <button onClick={() => void cloud.refresh()}>Reintentar</button></div>}
+        {cloud.loading && <div className="api-banner">Cargando datos reales…</div>}
         <DashboardView
           active={view === "dashboard"}
           widgets={widgets}
@@ -46,7 +91,7 @@ export function AuthenticatedApp() {
           onRemoveWidget={removeWidget}
           onOpenBuilder={() => setActiveSheet("builder")}
         />
-        <RobotsView active={view === "robots"} events={events} latestEventId={latestEventId} />
+        <RobotsView active={view === "robots"} events={events} latestEventId={latestEventId} robots={robots} codes={cloud.codes} />
       </div>
 
       <BottomNav active={view} onChange={setView} />

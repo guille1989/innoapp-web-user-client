@@ -1,4 +1,4 @@
-import { fmtCurrency } from "../data/mockEvents";
+import { fmtCurrency } from "../data/format";
 import { FIELD_LABELS, GROUP_LABELS } from "../data/widgetLabels";
 import { topGroup } from "./aggregate";
 import type { Aggregation, AggregatableField, BusinessEvent, GroupField, Widget, WidgetType } from "../types";
@@ -10,21 +10,22 @@ export function parseWidgetIntent(q: string): WidgetIntent | null {
   const wantsKpi = /kpi|total(es)?\b/.test(q);
   if (!wantsChart && !wantsKpi) return null;
 
-  let field: AggregatableField = "count";
-  if (/monto inicial|apertura/.test(q)) field = "monto_inicial";
-  else if (/venta|monto|ingreso/.test(q)) field = "monto";
-  else if (/item|ítem|art[ií]culo/.test(q)) field = "items";
+  let field: AggregatableField = "event_count";
+  if (/venta|monto|ingreso|total/.test(q)) field = "total";
+  else if (/item|ítem|art[ií]culo|cantidad/.test(q)) field = "quantity";
+  else if (/descuento/.test(q)) field = "discount";
+  else if (/propina/.test(q)) field = "tip";
 
   let group: GroupField | null = null;
-  if (/sucursal/.test(q)) group = "store";
-  else if (/robot/.test(q)) group = "robot";
-  else if (/tipo de evento|evento/.test(q)) group = "event_type";
-  else if (/m[eé]todo de pago|pago/.test(q)) group = "metodo_pago";
+  if (/robot|puerto|perif[eé]rico/.test(q)) group = "port";
+  else if (/estado/.test(q)) group = "status";
+  else if (/parser|parseo/.test(q)) group = "parsedBy";
+  else if (/producto|descripci[oó]n/.test(q)) group = "description";
 
   let type: WidgetType = "kpi";
   if (/dona|proporci[oó]n|distribuci[oó]n/.test(q)) type = "donut";
   else if (wantsChart) type = "bar";
-  if (type !== "kpi" && !group) group = "store";
+  if (type !== "kpi" && !group) group = "port";
 
   const agg: Aggregation = "sum";
   const title =
@@ -45,27 +46,15 @@ export function respond(question: string, events: BusinessEvent[]): AiResponse {
     return { kind: "widget", cfg: widgetCfg };
   }
 
-  if (q.includes("sucursal") && (q.includes("más") || q.includes("mas") || q.includes("vendió") || q.includes("vendio"))) {
-    const t = topGroup(events, "monto", "sum", "store");
+  if ((q.includes("robot") || q.includes("puerto")) && (q.includes("más") || q.includes("mas") || q.includes("vendió") || q.includes("vendio"))) {
+    const t = topGroup(events, "total", "sum", "port");
     if (!t) return { kind: "text" as const, text: "Aún no tengo suficientes lecturas." };
     return {
       kind: "text" as const,
       text: (
         <>
-          Hoy la sucursal con más ventas es <span className="mono-inline">{t.key}</span>, con {fmtCurrency(t.value)}{" "}
+          El periférico con más ventas es <span className="mono-inline">{t.key}</span>, con {fmtCurrency(t.value)}{" "}
           acumulados.
-        </>
-      ),
-    };
-  }
-
-  if (q.includes("robot") && (q.includes("problema") || q.includes("falla") || q.includes("offline"))) {
-    return {
-      kind: "text" as const,
-      text: (
-        <>
-          Detecto 1 robot sin señal: <span className="mono-inline">Robot-06</span> en Sucursal Este, sin lecturas
-          hace 14 min.
         </>
       ),
     };
@@ -73,6 +62,6 @@ export function respond(question: string, events: BusinessEvent[]): AiResponse {
 
   return {
     kind: "text" as const,
-    text: 'Puedo interpretar cualquier campo que llegue de tus robots y crear un KPI o gráfica por ti. Prueba: "gráfica de ventas por sucursal".',
+    text: 'Puedo crear widgets con los campos que expone la API. Prueba: "gráfica del total por robot".',
   };
 }

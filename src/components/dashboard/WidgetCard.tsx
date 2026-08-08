@@ -29,17 +29,17 @@ export function WidgetCard({ widget: w, events, onRemove }: WidgetCardProps) {
 }
 
 function KpiBody({ widget: w, events }: { widget: Widget; events: BusinessEvent[] }) {
-  const value = aggregateValue(events, w.field, w.agg);
+  const value = w.data?.[0]?.value ?? aggregateValue(events, w.field, w.agg);
   return (
     <>
       <div className="kpi-value mono">{formatWidgetValue(w.field, value)}</div>
-      <div className="kpi-sub">{w.field === "count" ? "conteo" : AGG_LABELS[w.agg].toLowerCase()} · en vivo</div>
+      <div className="kpi-sub">{w.field === "event_count" ? "conteo" : AGG_LABELS[w.agg].toLowerCase()} · datos reales</div>
     </>
   );
 }
 
 function BarBody({ widget: w, events }: { widget: Widget; events: BusinessEvent[] }) {
-  const rows = w.group ? aggregateByGroup(events, w.field, w.agg, w.group) : [];
+  const rows = w.data ?? (w.group ? aggregateByGroup(events, w.field, w.agg, w.group) : []);
   const max = rows.length ? rows[0].value : 1;
   return (
     <div className="bar-rows">
@@ -57,7 +57,7 @@ function BarBody({ widget: w, events }: { widget: Widget; events: BusinessEvent[
 }
 
 function DonutBody({ widget: w, events }: { widget: Widget; events: BusinessEvent[] }) {
-  const rows = w.group ? aggregateByGroup(events, w.field, w.agg, w.group) : [];
+  const rows = w.data ?? (w.group ? aggregateByGroup(events, w.field, w.agg, w.group) : []);
   const total = rows.reduce((s, r) => s + r.value, 0) || 1;
   let acc = 0;
   const stops = rows

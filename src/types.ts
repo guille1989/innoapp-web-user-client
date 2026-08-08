@@ -7,7 +7,7 @@ export interface EventMeta {
 }
 
 interface BusinessEventBase {
-  id: number;
+  id: string;
   ts: number;
   timeStr: string;
   store: string;
@@ -20,7 +20,7 @@ export interface VentaEvent extends BusinessEventBase {
   eventType: "venta";
   monto: number;
   items: number;
-  metodoPago: "Efectivo" | "Tarjeta";
+  metodoPago: "Efectivo" | "Tarjeta" | "Sin dato";
 }
 
 export interface DevolucionEvent extends BusinessEventBase {
@@ -36,9 +36,9 @@ export interface AperturaCajaEvent extends BusinessEventBase {
 
 export type BusinessEvent = VentaEvent | DevolucionEvent | AperturaCajaEvent;
 
-export type AggregatableField = "count" | "monto" | "items" | "monto_inicial";
-export type Aggregation = "sum" | "avg" | "max" | "min";
-export type GroupField = "store" | "robot" | "event_type" | "metodo_pago";
+export type AggregatableField = "event_count" | "quantity" | "unitPrice" | "subtotal" | "discount" | "tip" | "total";
+export type Aggregation = "sum" | "avg" | "max" | "min" | "count";
+export type GroupField = "port" | "status" | "parsedBy" | "description";
 
 export type WidgetType = "kpi" | "bar" | "donut";
 
@@ -49,6 +49,7 @@ export interface Widget {
   field: AggregatableField;
   agg: Aggregation;
   group: GroupField | null;
+  data?: AggregateRow[];
 }
 
 export interface AggregateRow {

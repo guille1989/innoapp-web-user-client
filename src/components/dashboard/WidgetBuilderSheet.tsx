@@ -15,23 +15,23 @@ const TYPE_OPTIONS: Array<{ type: WidgetType; label: string; icon: () => React.R
   { type: "donut", label: "Dona", icon: IconDonut },
 ];
 
-const FIELD_OPTIONS: AggregatableField[] = ["count", "monto", "items", "monto_inicial"];
-const AGG_OPTIONS: Aggregation[] = ["sum", "avg", "max", "min"];
-const GROUP_OPTIONS: GroupField[] = ["store", "robot", "event_type", "metodo_pago"];
+const FIELD_OPTIONS: AggregatableField[] = ["event_count", "total", "quantity", "unitPrice", "subtotal", "discount", "tip"];
+const AGG_OPTIONS: Aggregation[] = ["sum", "avg", "max", "min", "count"];
+const GROUP_OPTIONS: GroupField[] = ["port", "status", "parsedBy", "description"];
 
 export function WidgetBuilderSheet({ open, onClose, onCreate }: WidgetBuilderSheetProps) {
   const [type, setType] = useState<WidgetType>("kpi");
   const [title, setTitle] = useState("");
-  const [field, setField] = useState<AggregatableField>("count");
+  const [field, setField] = useState<AggregatableField>("event_count");
   const [agg, setAgg] = useState<Aggregation>("sum");
-  const [group, setGroup] = useState<GroupField>("store");
+  const [group, setGroup] = useState<GroupField>("port");
 
   function reset() {
     setType("kpi");
     setTitle("");
-    setField("count");
+    setField("event_count");
     setAgg("sum");
-    setGroup("store");
+    setGroup("port");
   }
 
   function handleClose() {
@@ -43,7 +43,7 @@ export function WidgetBuilderSheet({ open, onClose, onCreate }: WidgetBuilderShe
     const groupVal = type === "kpi" ? null : group;
     const autoTitle =
       FIELD_LABELS[field] +
-      (agg && field !== "count" ? ` (${AGG_LABELS[agg].toLowerCase()})` : "") +
+      (agg && field !== "event_count" ? ` (${AGG_LABELS[agg].toLowerCase()})` : "") +
       (groupVal ? ` por ${GROUP_LABELS[groupVal].toLowerCase()}` : "");
     onCreate({ type, title: title.trim() || autoTitle, field, agg, group: groupVal });
     handleClose();
@@ -106,7 +106,7 @@ export function WidgetBuilderSheet({ open, onClose, onCreate }: WidgetBuilderShe
           </select>
         </div>
 
-        {field !== "count" && (
+        {field !== "event_count" && (
           <div className="field">
             <label className="field-label" htmlFor="wAgg">
               Agregación

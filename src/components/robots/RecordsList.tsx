@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { fmtCurrency } from "../../data/mockEvents";
+import { fmtCurrency } from "../../data/format";
 import type { BusinessEvent, EventType } from "../../types";
 
 const FILTERS: Array<{ key: EventType | "all"; label: string }> = [
@@ -11,7 +11,7 @@ const FILTERS: Array<{ key: EventType | "all"; label: string }> = [
 
 interface RecordsListProps {
   events: BusinessEvent[];
-  latestEventId: number | null;
+  latestEventId: string | null;
 }
 
 function fieldChips(ev: BusinessEvent) {

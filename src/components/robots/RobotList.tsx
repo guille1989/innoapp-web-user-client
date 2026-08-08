@@ -1,12 +1,11 @@
-import { ROBOTS } from "../../data/mockEvents";
-import type { RobotStatus } from "../../types";
+import type { Robot, RobotStatus } from "../../types";
 
 const STATUS_LABEL: Record<RobotStatus, string> = { online: "online", warn: "reintentando", offline: "offline" };
 
-export function RobotList() {
+export function RobotList({ robots }: { robots: Robot[] }) {
   return (
     <div>
-      {ROBOTS.map((r) => (
+      {robots.map((r) => (
         <div className="robot-row" key={r.name}>
           <span className={`robot-status ${r.status}`} />
           <div className="robot-info">
