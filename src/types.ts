@@ -64,8 +64,8 @@ export interface Robot {
   name: string;
   store: string;
   city: string;
-  lat: number;
-  lng: number;
+  lat?: number;
+  lng?: number;
   status: RobotStatus;
   meta: string;
 }

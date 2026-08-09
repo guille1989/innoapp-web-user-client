@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import { api, type ApiActivationCode, type ApiAgent, type ApiTicket, type ApiWidget, type ApiWidgetData } from "../api/client";
+import { api, type AgentLocation, type ApiActivationCode, type ApiAgent, type ApiTicket, type ApiWidget, type ApiWidgetData } from "../api/client";
 
-const POLL_MS = 15_000;
+// Cada tick re-ejecuta una query de Athena por widget en el dashboard —
+// no es gratis (ver PROYECTO.md sección 10.1: un intervalo agresivo sin
+// pausar en pestañas en segundo plano fue lo que disparó el costo de S3
+// a principios de agosto). 30s en vez de 15s, y el efecto abajo lo pausa
+// del todo mientras la pestaña no está visible.
+const POLL_MS = 30_000;
 
 export function useCloudData(idToken: string) {
   const [tickets, setTickets] = useState<ApiTicket[]>([]);
@@ -34,8 +39,17 @@ export function useCloudData(idToken: string) {
 
   useEffect(() => {
     void refresh();
-    const timer = setInterval(() => void refresh(), POLL_MS);
-    return () => clearInterval(timer);
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") void refresh();
+    }, POLL_MS);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void refresh();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [refresh]);
 
   const createWidget = useCallback(async (body: Omit<ApiWidget, "widgetId" | "createdAt">) => {
@@ -55,5 +69,15 @@ export function useCloudData(idToken: string) {
     }
   }, [idToken, refresh]);
 
-  return { tickets, agents, codes, widgets, widgetData, error, loading, refresh, createWidget, deleteWidget };
+  const updateAgentLocation = useCallback(async (id: string, location: AgentLocation) => {
+    try {
+      await api.updateAgentLocation(idToken, id, location);
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      throw err;
+    }
+  }, [idToken, refresh]);
+
+  return { tickets, agents, codes, widgets, widgetData, error, loading, refresh, createWidget, deleteWidget, updateAgentLocation };
 }

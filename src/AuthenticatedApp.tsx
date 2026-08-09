@@ -39,8 +39,8 @@ function toRobot(agent: ApiAgent): Robot {
     name: agent.name,
     store: agent.location?.label ?? "Ubicación sin configurar",
     city: agent.location?.city ?? "",
-    lat: agent.location?.lat ?? 40.4168,
-    lng: agent.location?.lng ?? -3.7038,
+    lat: agent.location?.lat,
+    lng: agent.location?.lng,
     status,
     meta: agent.lastSeenAt ? `visto ${new Date(agent.lastSeenAt).toLocaleString("es-ES")}` : "sin heartbeat",
   };
@@ -85,7 +85,7 @@ export function AuthenticatedApp() {
           </div>
         )}
         <DashboardView active={view === "dashboard"} widgets={widgets} events={events} onRemoveWidget={(id) => void cloud.deleteWidget(id)} onOpenBuilder={() => setActiveSheet("builder")} />
-        <RobotsView active={view === "robots"} events={events} latestEventId={latestEventId} robots={robots} codes={cloud.codes} />
+        <RobotsView active={view === "robots"} events={events} latestEventId={latestEventId} robots={robots} codes={cloud.codes} onUpdateLocation={cloud.updateAgentLocation} />
       </main>
       <Overlay open={activeSheet !== null} onClick={() => setActiveSheet(null)} />
       <AiSheet open={activeSheet === "ai"} onOpen={() => setActiveSheet("ai")} onClose={() => setActiveSheet(null)} events={events} onCreateWidget={addWidget} />

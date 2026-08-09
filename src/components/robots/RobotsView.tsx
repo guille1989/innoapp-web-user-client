@@ -2,8 +2,9 @@ import { useMemo, useState } from "react";
 import { RobotList } from "./RobotList";
 import { RobotMap } from "./RobotMap";
 import { RecordsList } from "./RecordsList";
+import { LocationEditor } from "./LocationEditor";
 import type { BusinessEvent, Robot } from "../../types";
-import type { ApiActivationCode } from "../../api/client";
+import type { AgentLocation, ApiActivationCode } from "../../api/client";
 
 interface RobotsViewProps {
   active: boolean;
@@ -11,16 +12,18 @@ interface RobotsViewProps {
   latestEventId: string | null;
   robots: Robot[];
   codes: ApiActivationCode[];
+  onUpdateLocation: (agentId: string, location: AgentLocation) => Promise<void>;
 }
 
 type PanelTab = "install" | "agents" | "codes" | "records";
 const AGENT_DOWNLOAD_URL = (import.meta.env.VITE_AGENT_DOWNLOAD_URL as string | undefined)?.trim() || "/downloads/InnoAppAgent-Setup.exe";
 const AGENT_VERSION = (import.meta.env.VITE_AGENT_VERSION as string | undefined)?.trim() || "0.1.0-pilot";
 
-export function RobotsView({ active, events, latestEventId, robots, codes }: RobotsViewProps) {
+export function RobotsView({ active, events, latestEventId, robots, codes, onUpdateLocation }: RobotsViewProps) {
   const [panelOpen, setPanelOpen] = useState(true);
   const [tab, setTab] = useState<PanelTab>("install");
   const [copied, setCopied] = useState<string | null>(null);
+  const [editingLocation, setEditingLocation] = useState<Robot | null>(null);
   const online = useMemo(() => robots.filter((robot) => robot.status === "online").length, [robots]);
   const unusedCodes = codes.filter((code) => code.status === "unused");
 
@@ -68,12 +71,13 @@ export function RobotsView({ active, events, latestEventId, robots, codes }: Rob
                 {!AGENT_DOWNLOAD_URL && <div className="release-note">La descarga se activará automáticamente al configurar <span className="mono">VITE_AGENT_DOWNLOAD_URL</span> en el despliegue web.</div>}
               </div>
             )}
-            {tab === "agents" && <div className="panel-scroll"><RobotList robots={robots} />{robots.length === 0 && <div className="empty-state">Todavía no hay agentes activados.</div>}</div>}
+            {tab === "agents" && <div className="panel-scroll"><RobotList robots={robots} onConfigureLocation={setEditingLocation} />{robots.length === 0 && <div className="empty-state">Todavía no hay agentes activados.</div>}</div>}
             {tab === "codes" && <div className="panel-scroll codes-panel"><p>Utiliza un código para vincular un nuevo agente.</p>{unusedCodes.map((code) => <button key={code.code} className="activation-code" onClick={() => void copyCode(code.code)}><span className="mono">{code.code}</span><small>{copied === code.code ? "Copiado" : "Copiar"}</small></button>)}{unusedCodes.length === 0 && <div className="empty-state">No quedan códigos disponibles.</div>}</div>}
             {tab === "records" && <div className="panel-scroll records-panel"><RecordsList events={events} latestEventId={latestEventId} /></div>}
           </div>
         )}
       </aside>
+      {editingLocation && <LocationEditor robot={editingLocation} onClose={() => setEditingLocation(null)} onSave={onUpdateLocation} />}
     </section>
   );
 }

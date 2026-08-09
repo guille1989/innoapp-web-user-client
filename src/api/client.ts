@@ -22,6 +22,13 @@ export interface ApiAgent {
   location?: { label?: string; city?: string; lat?: number; lng?: number };
 }
 
+export interface AgentLocation {
+  label: string;
+  city: string;
+  lat: number;
+  lng: number;
+}
+
 export interface ApiActivationCode { code: string; status: "unused" | "used"; createdAt: string; usedAt?: string; agentId?: string }
 export interface ApiWidget {
   widgetId: string;
@@ -50,6 +57,11 @@ async function request<T>(idToken: string, path: string, init?: RequestInit): Pr
 export const api = {
   tickets: (token: string) => request<{ tickets: ApiTicket[] }>(token, "/tickets?limit=100"),
   agents: (token: string) => request<{ agents: ApiAgent[] }>(token, "/agents"),
+  updateAgentLocation: (token: string, id: string, location: AgentLocation) =>
+    request<{ agentId: string; location: AgentLocation }>(token, `/agents/${encodeURIComponent(id)}/location`, {
+      method: "PATCH",
+      body: JSON.stringify(location),
+    }),
   activationCodes: (token: string) => request<{ codes: ApiActivationCode[] }>(token, "/activation-codes"),
   widgets: (token: string) => request<{ widgets: ApiWidget[] }>(token, "/widgets"),
   widgetData: (token: string, id: string) => request<{ data: ApiWidgetData }>(token, `/widgets/${encodeURIComponent(id)}/data`),
