@@ -38,7 +38,14 @@ export function parseWidgetIntent(q: string): WidgetIntent | null {
 
 export type AiResponse = { kind: "widget"; cfg: WidgetIntent } | { kind: "text"; text: React.ReactNode };
 
-export function respond(question: string, events: BusinessEvent[]): AiResponse {
+/**
+ * Intentos locales, gratis e instantáneos (sin red) — solo los patrones que
+ * ya reconocíamos antes del asistente conectado a Bedrock. Devuelve `null`
+ * cuando no reconoce la pregunta, para que el que llama la mande al backend
+ * en vez de responder con un catch-all genérico (eso ahora lo resuelve el
+ * modelo, que sí puede consultar los datos reales — ver PROYECTO.md sección 13).
+ */
+export function respondLocally(question: string, events: BusinessEvent[]): AiResponse | null {
   const q = question.toLowerCase();
 
   const widgetCfg = parseWidgetIntent(q);
@@ -60,8 +67,5 @@ export function respond(question: string, events: BusinessEvent[]): AiResponse {
     };
   }
 
-  return {
-    kind: "text" as const,
-    text: 'Puedo crear widgets con los campos que expone la API. Prueba: "gráfica del total por robot".',
-  };
+  return null;
 }

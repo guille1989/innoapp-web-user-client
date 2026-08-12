@@ -88,7 +88,7 @@ export function AuthenticatedApp() {
         <RobotsView active={view === "robots"} events={events} latestEventId={latestEventId} robots={robots} codes={cloud.codes} onUpdateLocation={cloud.updateAgentLocation} />
       </main>
       <Overlay open={activeSheet !== null} onClick={() => setActiveSheet(null)} />
-      <AiSheet open={activeSheet === "ai"} onOpen={() => setActiveSheet("ai")} onClose={() => setActiveSheet(null)} events={events} onCreateWidget={addWidget} />
+      <AiSheet open={activeSheet === "ai"} onOpen={() => setActiveSheet("ai")} onClose={() => setActiveSheet(null)} events={events} onCreateWidget={addWidget} idToken={idToken!} />
       <WidgetBuilderSheet open={activeSheet === "builder"} onClose={() => setActiveSheet(null)} onCreate={addWidget} />
     </div>
   );

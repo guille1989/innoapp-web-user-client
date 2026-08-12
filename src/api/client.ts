@@ -39,6 +39,8 @@ export interface ApiWidget {
   createdAt: string;
 }
 export type ApiWidgetData = Array<{ label?: string; value: number }>;
+export interface ApiAssistantAnswer { answer: string }
+export interface ApiAssistantHistoryTurn { role: "user" | "assistant"; text: string }
 
 async function request<T>(idToken: string, path: string, init?: RequestInit): Promise<T> {
   if (!API_URL) throw new Error("Falta VITE_API_BASE_URL en la configuración del frontend");
@@ -68,4 +70,6 @@ export const api = {
   createWidget: (token: string, body: Omit<ApiWidget, "widgetId" | "createdAt">) =>
     request<ApiWidget>(token, "/widgets", { method: "POST", body: JSON.stringify(body) }),
   deleteWidget: (token: string, id: string) => request<void>(token, `/widgets/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  assistantAsk: (token: string, question: string, history: ApiAssistantHistoryTurn[] = []) =>
+    request<ApiAssistantAnswer>(token, "/assistant/ask", { method: "POST", body: JSON.stringify({ question, history }) }),
 };
