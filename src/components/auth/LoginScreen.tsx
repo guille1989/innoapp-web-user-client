@@ -3,7 +3,11 @@ import type { FormEvent } from "react";
 import { useAuth } from "../../auth/AuthContext";
 import { describeAuthError } from "../../auth/cognito";
 
-export function LoginScreen() {
+interface LoginScreenProps {
+  onSwitchToSignup: () => void;
+}
+
+export function LoginScreen({ onSwitchToSignup }: LoginScreenProps) {
   const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -81,6 +85,10 @@ export function LoginScreen() {
             </button>
           </form>
           <p className="login-help">Las sesiones se renuevan automáticamente mientras trabajas.</p>
+          <p className="login-help">
+            ¿No tenés cuenta?{" "}
+            <button type="button" className="login-switch" onClick={onSwitchToSignup} disabled={submitting}>Registrate</button>
+          </p>
         </div>
         <footer>© 2026 InnoApp · Todos los derechos reservados</footer>
       </section>

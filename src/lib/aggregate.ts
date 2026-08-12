@@ -17,6 +17,7 @@ const GROUP_KEY: Record<GroupField, (e: BusinessEvent) => string> = {
   status: (e) => e.meta.label,
   parsedBy: () => "Sin dato",
   description: () => "Sin dato",
+  day: (e) => new Date(e.ts).toISOString().slice(0, 10),
 };
 
 function fieldValue(e: BusinessEvent, field: AggregatableField): number | undefined {
@@ -67,8 +68,8 @@ export function aggregateByGroup(
     key,
     value: field === "event_count" ? vals.length : reduce(vals, agg),
   }));
-  rows.sort((a, b) => b.value - a.value);
-  return rows.slice(0, 6);
+  rows.sort(group === "day" ? (a, b) => a.key.localeCompare(b.key) : (a, b) => b.value - a.value);
+  return group === "day" ? rows : rows.slice(0, 6);
 }
 
 export function topGroup(

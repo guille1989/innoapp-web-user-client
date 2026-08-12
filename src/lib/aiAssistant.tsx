@@ -6,7 +6,7 @@ import type { Aggregation, AggregatableField, BusinessEvent, GroupField, Widget,
 export type WidgetIntent = Omit<Widget, "id">;
 
 export function parseWidgetIntent(q: string): WidgetIntent | null {
-  const wantsChart = /gr[aá]fica|barras|comparar|dona|proporci[oó]n|distribuci[oó]n/.test(q);
+  const wantsChart = /gr[aá]fica|barras|comparar|l[ií]nea|dona|proporci[oó]n|distribuci[oó]n/.test(q);
   const wantsKpi = /kpi|total(es)?\b/.test(q);
   if (!wantsChart && !wantsKpi) return null;
 
@@ -24,12 +24,14 @@ export function parseWidgetIntent(q: string): WidgetIntent | null {
 
   let type: WidgetType = "kpi";
   if (/dona|proporci[oó]n|distribuci[oó]n/.test(q)) type = "donut";
+  else if (/l[ií]nea/.test(q)) type = "line";
   else if (wantsChart) type = "bar";
-  if (type !== "kpi" && !group) group = "port";
+  if (type === "line") group = "day";
+  else if (type !== "kpi" && !group) group = "port";
 
   const agg: Aggregation = "sum";
   const title =
-    (type === "kpi" ? "KPI: " : type === "bar" ? "Barras: " : "Dona: ") +
+    (type === "kpi" ? "KPI: " : type === "bar" ? "Barras: " : type === "line" ? "Línea: " : "Dona: ") +
     FIELD_LABELS[field] +
     (group ? ` por ${GROUP_LABELS[group].toLowerCase()}` : "");
 

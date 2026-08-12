@@ -38,9 +38,9 @@ export type BusinessEvent = VentaEvent | DevolucionEvent | AperturaCajaEvent;
 
 export type AggregatableField = "event_count" | "quantity" | "unitPrice" | "subtotal" | "discount" | "tip" | "total";
 export type Aggregation = "sum" | "avg" | "max" | "min" | "count";
-export type GroupField = "port" | "status" | "parsedBy" | "description";
+export type GroupField = "port" | "status" | "parsedBy" | "description" | "day";
 
-export type WidgetType = "kpi" | "bar" | "donut";
+export type WidgetType = "kpi" | "bar" | "line" | "donut";
 
 export interface Widget {
   id: string;

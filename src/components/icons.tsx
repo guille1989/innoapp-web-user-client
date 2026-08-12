@@ -106,6 +106,18 @@ export function IconBar() {
   );
 }
 
+export function IconLine() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M4 18l5-6 4 3 7-9" />
+      <circle cx="4" cy="18" r="1" fill="currentColor" />
+      <circle cx="9" cy="12" r="1" fill="currentColor" />
+      <circle cx="13" cy="15" r="1" fill="currentColor" />
+      <circle cx="20" cy="6" r="1" fill="currentColor" />
+    </svg>
+  );
+}
+
 export function IconDonut() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

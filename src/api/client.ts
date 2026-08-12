@@ -33,7 +33,7 @@ export interface ApiActivationCode { code: string; status: "unused" | "used"; cr
 export interface ApiWidget {
   widgetId: string;
   name: string;
-  visualization: "kpi" | "bar" | "donut";
+  visualization: "kpi" | "bar" | "line" | "donut";
   metric: { field: string; aggregation: "sum" | "avg" | "max" | "min" | "count" };
   groupBy?: string;
   createdAt: string;
@@ -42,6 +42,11 @@ export type ApiWidgetData = Array<{ label?: string; value: number }>;
 export interface ApiAssistantAnswer { answer: string }
 export interface ApiAssistantHistoryTurn { role: "user" | "assistant"; text: string }
 
+async function readErrorBody(response: Response): Promise<never> {
+  const body = (await response.json().catch(() => ({}))) as { error?: string };
+  throw new Error(body.error ?? `La API respondió HTTP ${response.status}`);
+}
+
 async function request<T>(idToken: string, path: string, init?: RequestInit): Promise<T> {
   if (!API_URL) throw new Error("Falta VITE_API_BASE_URL en la configuración del frontend");
   const response = await fetch(`${API_URL}${path}`, {
@@ -49,14 +54,24 @@ async function request<T>(idToken: string, path: string, init?: RequestInit): Pr
     headers: { Authorization: `Bearer ${idToken}`, "Content-Type": "application/json", ...init?.headers },
   });
   if (response.status === 401 || response.status === 403) throw new Error("Tu sesión no tiene acceso a estos datos");
-  if (!response.ok) {
-    const body = (await response.json().catch(() => ({}))) as { error?: string };
-    throw new Error(body.error ?? `La API respondió HTTP ${response.status}`);
-  }
+  if (!response.ok) return readErrorBody(response);
   return (response.status === 204 ? undefined : await response.json()) as T;
 }
 
+/** Sin token — a diferencia de `request()`, esto es para el único endpoint público: `POST /signup` (la persona todavía no tiene ninguna credencial). */
+async function requestPublic<T>(path: string, init?: RequestInit): Promise<T> {
+  if (!API_URL) throw new Error("Falta VITE_API_BASE_URL en la configuración del frontend");
+  const response = await fetch(`${API_URL}${path}`, {
+    ...init,
+    headers: { "Content-Type": "application/json", ...init?.headers },
+  });
+  if (!response.ok) return readErrorBody(response);
+  return (await response.json()) as T;
+}
+
 export const api = {
+  signup: (businessName: string, email: string, password: string) =>
+    requestPublic<{ tenantId: string }>("/signup", { method: "POST", body: JSON.stringify({ businessName, email, password }) }),
   tickets: (token: string) => request<{ tickets: ApiTicket[] }>(token, "/tickets?limit=100"),
   agents: (token: string) => request<{ agents: ApiAgent[] }>(token, "/agents"),
   updateAgentLocation: (token: string, id: string, location: AgentLocation) =>

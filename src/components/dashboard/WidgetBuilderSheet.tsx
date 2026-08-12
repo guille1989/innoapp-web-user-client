@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AGG_LABELS, FIELD_LABELS, GROUP_LABELS } from "../../data/widgetLabels";
-import { IconBar, IconDonut, IconKpi } from "../icons";
+import { IconBar, IconDonut, IconKpi, IconLine } from "../icons";
 import type { Aggregation, AggregatableField, GroupField, Widget, WidgetType } from "../../types";
 
 interface WidgetBuilderSheetProps {
@@ -12,6 +12,7 @@ interface WidgetBuilderSheetProps {
 const TYPE_OPTIONS: Array<{ type: WidgetType; label: string; icon: () => React.ReactElement }> = [
   { type: "kpi", label: "KPI", icon: IconKpi },
   { type: "bar", label: "Barras", icon: IconBar },
+  { type: "line", label: "Línea", icon: IconLine },
   { type: "donut", label: "Dona", icon: IconDonut },
 ];
 
@@ -40,7 +41,7 @@ export function WidgetBuilderSheet({ open, onClose, onCreate }: WidgetBuilderShe
   }
 
   function handleCreate() {
-    const groupVal = type === "kpi" ? null : group;
+    const groupVal = type === "kpi" ? null : type === "line" ? "day" : group;
     const autoTitle =
       FIELD_LABELS[field] +
       (agg && field !== "event_count" ? ` (${AGG_LABELS[agg].toLowerCase()})` : "") +
@@ -121,7 +122,9 @@ export function WidgetBuilderSheet({ open, onClose, onCreate }: WidgetBuilderShe
           </div>
         )}
 
-        {type !== "kpi" && (
+        {type === "line" && <div className="temporal-hint"><span>Eje X</span><strong>Fecha de venta</strong><small>Podrás alternar entre día, semana y mes dentro del widget.</small></div>}
+
+        {type !== "kpi" && type !== "line" && (
           <div className="field">
             <label className="field-label" htmlFor="wGroup">
               Agrupar por

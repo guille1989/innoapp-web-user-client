@@ -13,7 +13,7 @@ import type { BusinessEvent, Robot, Widget } from "./types";
 
 type ActiveSheet = "ai" | "builder" | null;
 const VALID_FIELDS = new Set<Widget["field"]>(["event_count", "quantity", "unitPrice", "subtotal", "discount", "tip", "total"]);
-const VALID_GROUPS = new Set<NonNullable<Widget["group"]>>(["port", "status", "parsedBy", "description"]);
+const VALID_GROUPS = new Set<NonNullable<Widget["group"]>>(["port", "status", "parsedBy", "description", "day"]);
 
 function toEvent(ticket: ApiTicket): BusinessEvent {
   const date = new Date(ticket.capturedAt);

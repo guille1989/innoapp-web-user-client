@@ -23,6 +23,7 @@ export const GROUP_LABELS: Record<GroupField, string> = {
   status: "Estado de parseo",
   parsedBy: "Método de parseo",
   description: "Producto",
+  day: "Día",
 };
 
 export const CHART_PALETTE = ["#4FD8C4", "#A79BFF", "#FFB454", "#FF6B6B", "#6FA8FF", "#8892A3"];
