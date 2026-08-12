@@ -5,9 +5,10 @@ import type { AppView } from "./BottomNav";
 interface TopBarProps {
   active: AppView;
   onChange: (view: AppView) => void;
+  onOpenGuide: () => void;
 }
 
-export function TopBar({ active, onChange }: TopBarProps) {
+export function TopBar({ active, onChange, onOpenGuide }: TopBarProps) {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -29,14 +30,15 @@ export function TopBar({ active, onChange }: TopBarProps) {
         <strong>Inno<span>App</span></strong>
       </div>
       <nav className="view-switcher glass" aria-label="Secciones principales">
-        <button className={active === "dashboard" ? "active" : ""} onClick={() => onChange("dashboard")}>Datos</button>
-        <button className={active === "robots" ? "active" : ""} onClick={() => onChange("robots")}>Agentes</button>
+        <button data-tour="view-data" className={active === "dashboard" ? "active" : ""} onClick={() => onChange("dashboard")}>Datos</button>
+        <button data-tour="view-agents" className={active === "robots" ? "active" : ""} onClick={() => onChange("robots")}>Agentes</button>
       </nav>
-      <div className="user-menu" ref={menuRef}>
+      <div className="user-menu" ref={menuRef} data-tour="user-menu">
         <button className="user-avatar glass" onClick={() => setOpen((value) => !value)} aria-haspopup="menu" aria-expanded={open}>{initials}</button>
         {open && (
           <div className="user-popover glass" role="menu">
             <div className="user-identity"><strong>{email}</strong><span>Sesión segura</span></div>
+            <button role="menuitem" onClick={() => { setOpen(false); onOpenGuide(); }}>Guía de la aplicación <span>?</span></button>
             <button role="menuitem" onClick={logout}>Cerrar sesión <span>↗</span></button>
           </div>
         )}

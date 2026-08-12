@@ -5,6 +5,7 @@ import { RecordsList } from "./RecordsList";
 import { LocationEditor } from "./LocationEditor";
 import type { BusinessEvent, Robot } from "../../types";
 import type { AgentLocation, ApiActivationCode } from "../../api/client";
+import { AGENT_DOWNLOAD_URL, AGENT_VERSION } from "./agentInstall";
 
 interface RobotsViewProps {
   active: boolean;
@@ -16,9 +17,6 @@ interface RobotsViewProps {
 }
 
 type PanelTab = "install" | "agents" | "codes" | "records";
-const AGENT_DOWNLOAD_URL = (import.meta.env.VITE_AGENT_DOWNLOAD_URL as string | undefined)?.trim() || "/downloads/InnoAppAgent-Setup.exe";
-const AGENT_VERSION = (import.meta.env.VITE_AGENT_VERSION as string | undefined)?.trim() || "0.1.0-pilot";
-
 export function RobotsView({ active, events, latestEventId, robots, codes, onUpdateLocation }: RobotsViewProps) {
   const [panelOpen, setPanelOpen] = useState(true);
   const [tab, setTab] = useState<PanelTab>("install");

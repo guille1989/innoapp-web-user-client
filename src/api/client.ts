@@ -41,6 +41,22 @@ export interface ApiWidget {
 export type ApiWidgetData = Array<{ label?: string; value: number }>;
 export interface ApiAssistantAnswer { answer: string }
 export interface ApiAssistantHistoryTurn { role: "user" | "assistant"; text: string }
+export interface ApiOnboardingState {
+  version: 1;
+  startedAt?: string;
+  lastDeferredAt?: string;
+  completedAt?: string;
+  productTourCompletedAt?: string;
+  starterDashboardCreatedAt?: string;
+}
+export interface ApiMe {
+  tenantId: string;
+  businessName: string;
+  createdAt: string;
+  /** null identifica una cuenta anterior al onboarding. */
+  onboarding: ApiOnboardingState | null;
+}
+export type OnboardingAction = "start" | "defer" | "complete" | "complete-product-tour" | "create-starter-dashboard";
 
 async function readErrorBody(response: Response): Promise<never> {
   const body = (await response.json().catch(() => ({}))) as { error?: string };
@@ -72,6 +88,9 @@ async function requestPublic<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   signup: (businessName: string, email: string, password: string) =>
     requestPublic<{ tenantId: string }>("/signup", { method: "POST", body: JSON.stringify({ businessName, email, password }) }),
+  me: (token: string) => request<ApiMe>(token, "/me"),
+  updateOnboarding: (token: string, action: OnboardingAction) =>
+    request<{ onboarding: ApiOnboardingState }>(token, "/me/onboarding", { method: "PATCH", body: JSON.stringify({ action }) }),
   tickets: (token: string) => request<{ tickets: ApiTicket[] }>(token, "/tickets?limit=100"),
   agents: (token: string) => request<{ agents: ApiAgent[] }>(token, "/agents"),
   updateAgentLocation: (token: string, id: string, location: AgentLocation) =>

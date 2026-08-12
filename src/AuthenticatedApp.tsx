@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { TopBar } from "./components/TopBar";
 import type { AppView } from "./components/BottomNav";
 import { Overlay } from "./components/Overlay";
@@ -7,7 +7,11 @@ import { WidgetBuilderSheet } from "./components/dashboard/WidgetBuilderSheet";
 import { RobotsView } from "./components/robots/RobotsView";
 import { AiSheet } from "./components/ai/AiSheet";
 import { useCloudData } from "./hooks/useCloudData";
+import { useOnboarding } from "./hooks/useOnboarding";
 import { useAuth } from "./auth/AuthContext";
+import { OnboardingFlow } from "./components/onboarding/OnboardingFlow";
+import { OnboardingReminder } from "./components/onboarding/OnboardingReminder";
+import { ProductTour } from "./components/onboarding/ProductTour";
 import type { ApiAgent, ApiTicket, ApiWidget } from "./api/client";
 import type { BusinessEvent, Robot, Widget } from "./types";
 
@@ -50,7 +54,11 @@ export function AuthenticatedApp() {
   const { idToken } = useAuth();
   const [view, setView] = useState<AppView>("dashboard");
   const [activeSheet, setActiveSheet] = useState<ActiveSheet>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [tourRun, setTourRun] = useState(0);
   const cloud = useCloudData(idToken!);
+  const onboarding = useOnboarding(idToken!);
+  const onboardingAct = onboarding.act;
   const events = useMemo(() => cloud.tickets.map(toEvent).sort((a, b) => a.ts - b.ts), [cloud.tickets]);
   const robots = useMemo(() => cloud.agents.map(toRobot), [cloud.agents]);
   const widgets = useMemo(() => cloud.widgets.map((w: ApiWidget): Widget => ({
@@ -63,6 +71,23 @@ export function AuthenticatedApp() {
     data: cloud.widgetData[w.widgetId]?.map((row) => ({ key: row.label ?? "total", value: row.value })) ?? [],
   })), [cloud.widgets, cloud.widgetData]);
   const latestEventId = events.at(-1)?.id ?? null;
+  const connected = cloud.agents.some((agent) => Boolean(agent.lastSeenAt));
+
+  useEffect(() => {
+    const state = onboarding.me?.onboarding;
+    if (state && !state.startedAt && !state.completedAt) setShowOnboarding(true);
+  }, [onboarding.me]);
+
+  const startTour = useCallback(() => {
+    setView("dashboard");
+    setTourRun((run) => run + 1);
+  }, []);
+
+  const finishTour = useCallback(() => {
+    if (onboarding.me?.onboarding && !onboarding.me.onboarding.productTourCompletedAt) {
+      void onboardingAct("complete-product-tour");
+    }
+  }, [onboarding.me?.onboarding, onboardingAct]);
 
   function addWidget(cfg: Omit<Widget, "id">) {
     void cloud.createWidget({
@@ -73,9 +98,29 @@ export function AuthenticatedApp() {
     });
   }
 
+  if (onboarding.loading) {
+    return <div className="app-loading"><img src="/brand/innoapp-mark.png" alt="InnoApp" /><span className="spinner" /></div>;
+  }
+
+  const onboardingState = onboarding.me?.onboarding;
+  if (showOnboarding && onboarding.me && onboardingState && !onboardingState.completedAt) {
+    return <OnboardingFlow
+      businessName={onboarding.me.businessName}
+      state={onboardingState}
+      agents={cloud.agents}
+      codes={cloud.codes}
+      tickets={cloud.tickets}
+      widgets={cloud.widgets}
+      onRefresh={cloud.refresh}
+      onAction={onboardingAct}
+      onDefer={() => setShowOnboarding(false)}
+      onComplete={() => { setShowOnboarding(false); startTour(); }}
+    />;
+  }
+
   return (
     <div className="app-root">
-      <TopBar active={view} onChange={setView} />
+      <TopBar active={view} onChange={setView} onOpenGuide={startTour} />
       <main className="app-stage">
         {(cloud.error || cloud.loading) && (
           <div className={`api-banner glass${cloud.error ? " error" : ""}`}>
@@ -90,6 +135,10 @@ export function AuthenticatedApp() {
       <Overlay open={activeSheet !== null} onClick={() => setActiveSheet(null)} />
       <AiSheet open={activeSheet === "ai"} onOpen={() => setActiveSheet("ai")} onClose={() => setActiveSheet(null)} events={events} onCreateWidget={addWidget} idToken={idToken!} />
       <WidgetBuilderSheet open={activeSheet === "builder"} onClose={() => setActiveSheet(null)} onCreate={addWidget} />
+      {onboardingState && !onboardingState.completedAt && (
+        <OnboardingReminder connected={connected} hasTickets={cloud.tickets.length > 0} hasWidgets={cloud.widgets.length > 0} onContinue={() => setShowOnboarding(true)} />
+      )}
+      <ProductTour run={tourRun} onFinished={finishTour} />
     </div>
   );
 }

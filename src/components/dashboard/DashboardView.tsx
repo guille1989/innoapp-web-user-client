@@ -89,7 +89,7 @@ export function DashboardView({ active, widgets, events, onRemoveWidget, onOpenB
         })}
       </div>
       {widgets.length === 0 && <div className="canvas-empty"><div className="empty-icon">＋</div><strong>Tu espacio de datos está vacío</strong><span>Añade un KPI o una gráfica para comenzar.</span><button onClick={onOpenBuilder}>Crear primer widget</button></div>}
-      {active && <button className="fab glass" onClick={onOpenBuilder} aria-label="Agregar widget"><IconPlus /><span>Añadir widget</span></button>}
+      {active && <button data-tour="create-widget" className="fab glass" onClick={onOpenBuilder} aria-label="Agregar widget"><IconPlus /><span>Añadir widget</span></button>}
     </section>
   );
 }
