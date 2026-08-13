@@ -56,12 +56,12 @@ export function SignupScreen({ onSwitchToLogin }: SignupScreenProps) {
           </div>
         </div>
         <div className="login-copy">
-          <span className="eyebrow">Inteligencia operativa</span>
-          <h1>Convierte cada ticket en una decisión.</h1>
-          <p>Registrá tu negocio, activá hasta 5 robots y empezá a ver tus datos en minutos.</p>
+          <span className="eyebrow">Datos + IA</span>
+          <h1>Únete a la nueva era del dato.</h1>
+          <p>Convierte tu información en conocimiento útil con una plataforma que reúne datos, visualización e inteligencia artificial.</p>
           <div className="login-features">
-            <span><i /> Datos en tiempo real</span>
-            <span><i /> Agentes monitorizados</span>
+            <span><i /> IA aplicada a tus datos</span>
+            <span><i /> Información centralizada</span>
             <span><i /> Dashboards a medida</span>
           </div>
         </div>
@@ -73,7 +73,7 @@ export function SignupScreen({ onSwitchToLogin }: SignupScreenProps) {
           <div className="form-logo"><img src="/brand/innoapp-mark.png" alt="" /><strong>Inno<span>App</span></strong></div>
           <div className="login-heading">
             <h2>Creá tu cuenta</h2>
-            <p>Sin costo mientras estamos en pruebas — activás hasta 5 robots para probar el sistema.</p>
+            <p>Empieza a organizar, visualizar y comprender la información de tu negocio.</p>
           </div>
           <form onSubmit={handleSubmit}>
             <label className="login-field" htmlFor="signupBusiness">
