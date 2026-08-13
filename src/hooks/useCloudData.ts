@@ -8,6 +8,15 @@ import { api, type AgentLocation, type ApiActivationCode, type ApiAgent, type Ap
 // del todo mientras la pestaña no está visible.
 const POLL_MS = 30_000;
 
+function mergeAgentsKeepingNewest(current: ApiAgent[], incoming: ApiAgent[]): ApiAgent[] {
+  const currentById = new Map(current.map((agent) => [agent.agentId, agent]));
+  return incoming.map((agent) => {
+    const previous = currentById.get(agent.agentId);
+    if (!previous?.lastSeenAt || !agent.lastSeenAt) return agent.lastSeenAt ? agent : (previous ?? agent);
+    return Date.parse(agent.lastSeenAt) >= Date.parse(previous.lastSeenAt) ? agent : previous;
+  });
+}
+
 export function useCloudData(idToken: string) {
   const [tickets, setTickets] = useState<ApiTicket[]>([]);
   const [agents, setAgents] = useState<ApiAgent[]>([]);
@@ -17,6 +26,21 @@ export function useCloudData(idToken: string) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // El onboarding necesita comprobar la conexión sin esperar tickets,
+  // códigos, widgets ni consultas de Athena. Esta lectura separada también
+  // evita que una respuesta antigua del refresh general tape un heartbeat
+  // que acabamos de observar.
+  const refreshAgents = useCallback(async () => {
+    try {
+      const result = await api.agents(idToken);
+      setAgents((current) => mergeAgentsKeepingNewest(current, result.agents));
+      return result.agents;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      throw err;
+    }
+  }, [idToken]);
+
   const refresh = useCallback(async () => {
     try {
       const [ticketResult, agentResult, codeResult, widgetResult] = await Promise.all([
@@ -25,7 +49,7 @@ export function useCloudData(idToken: string) {
       const dataResults = await Promise.allSettled(widgetResult.widgets.map(async (w) => [w.widgetId, (await api.widgetData(idToken, w.widgetId)).data] as const));
       const dataEntries = dataResults.flatMap((result) => result.status === "fulfilled" ? [result.value] : []);
       setTickets(ticketResult.tickets);
-      setAgents(agentResult.agents);
+      setAgents((current) => mergeAgentsKeepingNewest(current, agentResult.agents));
       setCodes(codeResult.codes);
       setWidgets(widgetResult.widgets);
       setWidgetData(Object.fromEntries(dataEntries));
@@ -79,5 +103,5 @@ export function useCloudData(idToken: string) {
     }
   }, [idToken, refresh]);
 
-  return { tickets, agents, codes, widgets, widgetData, error, loading, refresh, createWidget, deleteWidget, updateAgentLocation };
+  return { tickets, agents, codes, widgets, widgetData, error, loading, refresh, refreshAgents, createWidget, deleteWidget, updateAgentLocation };
 }

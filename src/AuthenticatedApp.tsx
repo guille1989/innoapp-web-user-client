@@ -112,6 +112,7 @@ export function AuthenticatedApp() {
       tickets={cloud.tickets}
       widgets={cloud.widgets}
       onRefresh={cloud.refresh}
+      onRefreshAgents={cloud.refreshAgents}
       onAction={onboardingAct}
       onDefer={() => setShowOnboarding(false)}
       onComplete={() => { setShowOnboarding(false); startTour(); }}

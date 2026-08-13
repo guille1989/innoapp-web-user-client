@@ -13,12 +13,13 @@ interface OnboardingFlowProps {
   tickets: ApiTicket[];
   widgets: ApiWidget[];
   onRefresh: () => Promise<void>;
+  onRefreshAgents: () => Promise<ApiAgent[]>;
   onAction: (action: OnboardingAction) => Promise<ApiOnboardingState>;
   onDefer: () => void;
   onComplete: () => void;
 }
 
-export function OnboardingFlow({ businessName, state, agents, codes, tickets, widgets, onRefresh, onAction, onDefer, onComplete }: OnboardingFlowProps) {
+export function OnboardingFlow({ businessName, state, agents, codes, tickets, widgets, onRefresh, onRefreshAgents, onAction, onDefer, onComplete }: OnboardingFlowProps) {
   const connectedAgent = agents.find((agent) => Boolean(agent.lastSeenAt));
   const unusedCodes = codes.filter((code) => code.status === "unused");
   const [step, setStep] = useState<Step>(state.startedAt ? (connectedAgent ? "data" : "install") : "welcome");
@@ -29,7 +30,16 @@ export function OnboardingFlow({ businessName, state, agents, codes, tickets, wi
 
   useEffect(() => { if (!state.startedAt) void onAction("start"); }, [state.startedAt, onAction]);
   useEffect(() => {
-    if (step !== "connect" && step !== "data") return;
+    if (step !== "connect") return;
+    // Primera comprobación inmediata; después, polling ligero. La activación
+    // suele quedar visible en 2–6 s y no depende de las demás APIs.
+    void onRefreshAgents().catch(() => {});
+    const timer = window.setInterval(() => void onRefreshAgents().catch(() => {}), 2_000);
+    return () => window.clearInterval(timer);
+  }, [step, onRefreshAgents]);
+
+  useEffect(() => {
+    if (step !== "data") return;
     const timer = window.setInterval(() => void onRefresh(), 4_000);
     return () => window.clearInterval(timer);
   }, [step, onRefresh]);
