@@ -42,12 +42,12 @@ export function LoginScreen({ onSwitchToSignup }: LoginScreenProps) {
           </div>
         </div>
         <div className="login-copy">
-          <span className="eyebrow">Inteligencia operativa</span>
-          <h1>Convierte cada ticket en una decisión.</h1>
-          <p>Conecta tus puntos de venta, supervisa tus agentes y entiende el negocio en tiempo real.</p>
+          <span className="eyebrow">Datos + IA</span>
+          <h1>Únete a la nueva era del dato.</h1>
+          <p>Convierte tu información en conocimiento útil con una plataforma que reúne datos, visualización e inteligencia artificial.</p>
           <div className="login-features">
-            <span><i /> Datos en tiempo real</span>
-            <span><i /> Agentes monitorizados</span>
+            <span><i /> IA aplicada a tus datos</span>
+            <span><i /> Información centralizada</span>
             <span><i /> Dashboards a medida</span>
           </div>
         </div>
