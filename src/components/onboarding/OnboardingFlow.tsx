@@ -20,7 +20,10 @@ interface OnboardingFlowProps {
 }
 
 export function OnboardingFlow({ businessName, state, agents, codes, tickets, widgets, onRefresh, onRefreshAgents, onAction, onDefer, onComplete }: OnboardingFlowProps) {
-  const connectedAgent = agents.find((agent) => Boolean(agent.lastSeenAt));
+  // La activación ya es una llamada real del agente al backend y crea este
+  // registro. No bloqueamos el onboarding esperando además el primer
+  // heartbeat, que puede retrasarse por la propagación de la API key.
+  const connectedAgent = agents[0];
   const unusedCodes = codes.filter((code) => code.status === "unused");
   const [step, setStep] = useState<Step>(state.startedAt ? (connectedAgent ? "data" : "install") : "welcome");
   const [copied, setCopied] = useState<string | null>(null);
@@ -37,6 +40,13 @@ export function OnboardingFlow({ businessName, state, agents, codes, tickets, wi
     const timer = window.setInterval(() => void onRefreshAgents().catch(() => {}), 2_000);
     return () => window.clearInterval(timer);
   }, [step, onRefreshAgents]);
+
+  useEffect(() => {
+    if (step !== "connect" || !connectedAgent) return;
+    // Mostramos brevemente la confirmación y avanzamos sin exigir otro clic.
+    const timer = window.setTimeout(() => setStep("data"), 900);
+    return () => window.clearTimeout(timer);
+  }, [step, connectedAgent]);
 
   useEffect(() => {
     if (step !== "data") return;

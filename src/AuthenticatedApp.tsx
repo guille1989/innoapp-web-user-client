@@ -71,7 +71,7 @@ export function AuthenticatedApp() {
     data: cloud.widgetData[w.widgetId]?.map((row) => ({ key: row.label ?? "total", value: row.value })) ?? [],
   })), [cloud.widgets, cloud.widgetData]);
   const latestEventId = events.at(-1)?.id ?? null;
-  const connected = cloud.agents.some((agent) => Boolean(agent.lastSeenAt));
+  const connected = cloud.agents.length > 0;
 
   useEffect(() => {
     const state = onboarding.me?.onboarding;
