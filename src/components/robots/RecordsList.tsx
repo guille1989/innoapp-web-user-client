@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { fmtCurrency } from "../../data/format";
+import { fmtAmount } from "../../data/format";
 import type { BusinessEvent, EventType } from "../../types";
 
 const FILTERS: Array<{ key: EventType | "all"; label: string }> = [
@@ -19,7 +19,7 @@ function fieldChips(ev: BusinessEvent) {
     return (
       <>
         <span className="record-chip">
-          monto: <b>{fmtCurrency(ev.monto)}</b>
+          monto: <b>{fmtAmount(ev.monto)}</b>
         </span>
         <span className="record-chip">
           items: <b>{ev.items}</b>
@@ -34,7 +34,7 @@ function fieldChips(ev: BusinessEvent) {
     return (
       <>
         <span className="record-chip">
-          monto: <b>{fmtCurrency(ev.monto)}</b>
+          monto: <b>{fmtAmount(ev.monto)}</b>
         </span>
         <span className="record-chip">
           motivo: <b>{ev.motivo}</b>
@@ -44,7 +44,7 @@ function fieldChips(ev: BusinessEvent) {
   }
   return (
     <span className="record-chip">
-      monto_inicial: <b>{fmtCurrency(ev.montoInicial)}</b>
+      monto_inicial: <b>{fmtAmount(ev.montoInicial)}</b>
     </span>
   );
 }

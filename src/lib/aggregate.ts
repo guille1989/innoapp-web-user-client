@@ -1,4 +1,4 @@
-import { fmtCurrency } from "../data/format";
+import { fmtAmount } from "../data/format";
 import type {
   Aggregation,
   AggregatableField,
@@ -7,9 +7,10 @@ import type {
   GroupField,
 } from "../types";
 
-export function formatWidgetValue(field: AggregatableField, value: number): string {
-  if (["unitPrice", "subtotal", "discount", "tip", "total"].includes(field)) return fmtCurrency(value);
-  return Math.round(value).toLocaleString("es-ES");
+export function formatWidgetValue(_field: AggregatableField, value: number): string {
+  // Todos los campos (montos y conteos) se muestran como número pelado por
+  // ahora — ver nota en data/format.ts sobre moneda por tenant.
+  return fmtAmount(value);
 }
 
 const GROUP_KEY: Record<GroupField, (e: BusinessEvent) => string> = {

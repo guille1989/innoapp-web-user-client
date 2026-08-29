@@ -1,4 +1,4 @@
-import { fmtCurrency } from "../data/format";
+import { fmtAmount } from "../data/format";
 import { FIELD_LABELS, GROUP_LABELS } from "../data/widgetLabels";
 import { topGroup } from "./aggregate";
 import type { Aggregation, AggregatableField, BusinessEvent, GroupField, Widget, WidgetType } from "../types";
@@ -62,7 +62,7 @@ export function respondLocally(question: string, events: BusinessEvent[]): AiRes
       kind: "text" as const,
       text: (
         <>
-          El periférico con más ventas es <span className="mono-inline">{t.key}</span>, con {fmtCurrency(t.value)}{" "}
+          El periférico con más ventas es <span className="mono-inline">{t.key}</span>, con {fmtAmount(t.value)}{" "}
           acumulados.
         </>
       ),
