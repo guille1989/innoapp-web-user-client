@@ -2,6 +2,29 @@ import L from "leaflet";
 import { useEffect, useRef } from "react";
 import type { Robot, RobotStatus } from "../../types";
 
+// Basemap configurable por entorno. CARTO discontinuó el acceso anónimo a sus
+// tiles (las servía con marca de agua "API KEY REQUIRED"), así que el default
+// pasó a ser el basemap oscuro keyless de Esri (capa base + capa de etiquetas).
+// Para un proveedor con plan pago y tema propio (Stadia, CARTO, MapTiler)
+// alcanza con setear VITE_MAP_TILE_URL (y opcionalmente VITE_MAP_TILE_ATTRIBUTION)
+// en el .env del despliegue — mismo patrón que el resto de las VITE_*.
+const CUSTOM_TILE_URL = (import.meta.env.VITE_MAP_TILE_URL as string | undefined)?.trim();
+const CUSTOM_TILE_ATTRIBUTION = (import.meta.env.VITE_MAP_TILE_ATTRIBUTION as string | undefined)?.trim();
+const ESRI_DARK_BASE = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}";
+const ESRI_DARK_LABELS = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}";
+const ESRI_ATTRIBUTION = "&copy; <a href=\"https://www.esri.com/\">Esri</a>";
+const ESRI_MAX_ZOOM = 16;
+const MAP_MAX_ZOOM = CUSTOM_TILE_URL ? 20 : ESRI_MAX_ZOOM;
+
+function addBasemap(map: L.Map) {
+  if (CUSTOM_TILE_URL) {
+    L.tileLayer(CUSTOM_TILE_URL, { attribution: CUSTOM_TILE_ATTRIBUTION ?? "", maxZoom: 20 }).addTo(map);
+    return;
+  }
+  L.tileLayer(ESRI_DARK_BASE, { attribution: ESRI_ATTRIBUTION, maxZoom: ESRI_MAX_ZOOM }).addTo(map);
+  L.tileLayer(ESRI_DARK_LABELS, { maxZoom: ESRI_MAX_ZOOM }).addTo(map);
+}
+
 const STATUS_LABEL: Record<RobotStatus, string> = { online: "online", warn: "reintentando", offline: "offline" };
 const STATUS_BG: Record<RobotStatus, string> = {
   online: "var(--teal-dim)",
@@ -55,11 +78,8 @@ export function RobotMap({ active, robots }: RobotMapProps) {
 
     let map = mapRef.current;
     if (!map) {
-      map = L.map(containerRef.current, { zoomControl: false, attributionControl: true }).setView([40.2, -3.5], 6);
-      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-        attribution: "&copy; OSM &copy; CARTO",
-        maxZoom: 19,
-      }).addTo(map);
+      map = L.map(containerRef.current, { zoomControl: false, attributionControl: true, maxZoom: MAP_MAX_ZOOM }).setView([40.2, -3.5], 6);
+      addBasemap(map);
       mapRef.current = map;
     }
 
