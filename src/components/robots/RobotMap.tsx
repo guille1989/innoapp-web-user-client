@@ -1,29 +1,7 @@
 import L from "leaflet";
 import { useEffect, useRef } from "react";
 import type { Robot, RobotStatus } from "../../types";
-
-// Basemap configurable por entorno. CARTO discontinuó el acceso anónimo a sus
-// tiles (las servía con marca de agua "API KEY REQUIRED"), así que el default
-// pasó a ser el basemap oscuro keyless de Esri (capa base + capa de etiquetas).
-// Para un proveedor con plan pago y tema propio (Stadia, CARTO, MapTiler)
-// alcanza con setear VITE_MAP_TILE_URL (y opcionalmente VITE_MAP_TILE_ATTRIBUTION)
-// en el .env del despliegue — mismo patrón que el resto de las VITE_*.
-const CUSTOM_TILE_URL = (import.meta.env.VITE_MAP_TILE_URL as string | undefined)?.trim();
-const CUSTOM_TILE_ATTRIBUTION = (import.meta.env.VITE_MAP_TILE_ATTRIBUTION as string | undefined)?.trim();
-const ESRI_DARK_BASE = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}";
-const ESRI_DARK_LABELS = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}";
-const ESRI_ATTRIBUTION = "&copy; <a href=\"https://www.esri.com/\">Esri</a>";
-const ESRI_MAX_ZOOM = 16;
-const MAP_MAX_ZOOM = CUSTOM_TILE_URL ? 20 : ESRI_MAX_ZOOM;
-
-function addBasemap(map: L.Map) {
-  if (CUSTOM_TILE_URL) {
-    L.tileLayer(CUSTOM_TILE_URL, { attribution: CUSTOM_TILE_ATTRIBUTION ?? "", maxZoom: 20 }).addTo(map);
-    return;
-  }
-  L.tileLayer(ESRI_DARK_BASE, { attribution: ESRI_ATTRIBUTION, maxZoom: ESRI_MAX_ZOOM }).addTo(map);
-  L.tileLayer(ESRI_DARK_LABELS, { maxZoom: ESRI_MAX_ZOOM }).addTo(map);
-}
+import { addBasemap, MAP_MAX_ZOOM } from "./basemap";
 
 const STATUS_LABEL: Record<RobotStatus, string> = { online: "online", warn: "reintentando", offline: "offline" };
 const STATUS_BG: Record<RobotStatus, string> = {
@@ -72,13 +50,17 @@ export function RobotMap({ active, robots }: RobotMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markersRef = useRef<Map<string, L.Marker>>(new Map());
+  // Qué conjunto de agentes ubicados ya encuadramos — para recentrar solo
+  // cuando cambia (un agente estrena ubicación), no en cada refresco de estado.
+  const fittedKeyRef = useRef<string>("");
 
   useEffect(() => {
     if (!active || !containerRef.current) return;
 
     let map = mapRef.current;
     if (!map) {
-      map = L.map(containerRef.current, { zoomControl: false, attributionControl: true, maxZoom: MAP_MAX_ZOOM }).setView([40.2, -3.5], 6);
+      // Sin agentes ubicados todavía: mapa-mundi neutro (no un país concreto).
+      map = L.map(containerRef.current, { zoomControl: false, attributionControl: true, maxZoom: MAP_MAX_ZOOM }).setView([15, 0], 2);
       addBasemap(map);
       mapRef.current = map;
     }
@@ -104,6 +86,20 @@ export function RobotMap({ active, robots }: RobotMapProps) {
       if (!visibleIds.has(id)) {
         marker.remove();
         markersRef.current.delete(id);
+      }
+    }
+
+    // Recentrar sobre los agentes ubicados. Solo cuando cambia el conjunto
+    // (uno estrena/pierde ubicación), no en cada refresco — así no le
+    // arrebatamos el encuadre al usuario mientras mira el mapa.
+    const located = robots.filter((r): r is Robot & { lat: number; lng: number } => r.lat !== undefined && r.lng !== undefined);
+    const fitKey = located.map((r) => r.id).sort().join(",");
+    if (fitKey !== fittedKeyRef.current) {
+      fittedKeyRef.current = fitKey;
+      if (located.length === 1) {
+        map.setView([located[0].lat, located[0].lng], 13);
+      } else if (located.length > 1) {
+        map.fitBounds(L.latLngBounds(located.map((r) => [r.lat, r.lng] as [number, number])), { padding: [40, 40], maxZoom: 14 });
       }
     }
 

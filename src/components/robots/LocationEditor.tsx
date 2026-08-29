@@ -2,6 +2,7 @@ import L from "leaflet";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { AgentLocation } from "../../api/client";
 import type { Robot } from "../../types";
+import { addBasemap, MAP_MAX_ZOOM } from "./basemap";
 
 interface LocationEditorProps {
   robot: Robot;
@@ -22,9 +23,10 @@ export function LocationEditor({ robot, onClose, onSave }: LocationEditorProps) 
 
   useEffect(() => {
     if (!mapElement.current) return;
-    const center: L.LatLngExpression = lat !== undefined && lng !== undefined ? [lat, lng] : [40.2, -3.5];
-    const map = L.map(mapElement.current, { zoomControl: true }).setView(center, lat === undefined ? 6 : 15);
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", { attribution: "&copy; OSM &copy; CARTO", maxZoom: 19 }).addTo(map);
+    const center: L.LatLngExpression = lat !== undefined && lng !== undefined ? [lat, lng] : [15, 0];
+    const map = L.map(mapElement.current, { zoomControl: true, maxZoom: MAP_MAX_ZOOM })
+      .setView(center, lat === undefined ? 2 : 15);
+    addBasemap(map);
 
     const placeMarker = (nextLat: number, nextLng: number) => {
       if (markerRef.current) markerRef.current.setLatLng([nextLat, nextLng]);
