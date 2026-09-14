@@ -20,6 +20,7 @@ export const AGG_LABELS: Record<Aggregation, string> = {
 
 export const GROUP_LABELS: Record<GroupField, string> = {
   port: "Puerto / periférico",
+  agent: "Agente",
   status: "Estado de parseo",
   parsedBy: "Método de parseo",
   description: "Producto",

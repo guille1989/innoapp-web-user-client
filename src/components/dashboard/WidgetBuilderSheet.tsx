@@ -18,7 +18,7 @@ const TYPE_OPTIONS: Array<{ type: WidgetType; label: string; icon: () => React.R
 
 const FIELD_OPTIONS: AggregatableField[] = ["event_count", "total", "quantity", "unitPrice", "subtotal", "discount", "tip"];
 const AGG_OPTIONS: Aggregation[] = ["sum", "avg", "max", "min", "count"];
-const GROUP_OPTIONS: GroupField[] = ["port", "status", "parsedBy", "description"];
+const GROUP_OPTIONS: GroupField[] = ["port", "agent", "status", "parsedBy", "description"];
 
 export function WidgetBuilderSheet({ open, onClose, onCreate }: WidgetBuilderSheetProps) {
   const [type, setType] = useState<WidgetType>("kpi");

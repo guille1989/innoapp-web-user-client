@@ -15,6 +15,7 @@ export function formatWidgetValue(_field: AggregatableField, value: number): str
 
 const GROUP_KEY: Record<GroupField, (e: BusinessEvent) => string> = {
   port: (e) => e.robot,
+  agent: () => "Sin dato",
   status: (e) => e.meta.label,
   parsedBy: () => "Sin dato",
   description: () => "Sin dato",

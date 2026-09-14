@@ -17,7 +17,8 @@ export function parseWidgetIntent(q: string): WidgetIntent | null {
   else if (/propina/.test(q)) field = "tip";
 
   let group: GroupField | null = null;
-  if (/robot|puerto|perif[eé]rico/.test(q)) group = "port";
+  if (/agente/.test(q)) group = "agent";
+  else if (/robot|puerto|perif[eé]rico/.test(q)) group = "port";
   else if (/estado/.test(q)) group = "status";
   else if (/parser|parseo/.test(q)) group = "parsedBy";
   else if (/producto|descripci[oó]n/.test(q)) group = "description";
