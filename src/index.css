@@ -89,10 +89,25 @@ button { border: 0; background: none; cursor: pointer; }
 .records-panel { padding: 12px; }.section-label { margin-bottom: 9px; font-size: 10px; font-weight: 600; }.filters-scroll { display: flex; gap: 5px; overflow-x: auto; scrollbar-width: none; }.filter-pill { flex: 0 0 auto; padding: 5px 9px; border: 1px solid var(--border); border-radius: 14px; color: var(--muted); font-size: 8px; }.filter-pill.active { border-color: rgba(140,244,238,.3); color: var(--teal); background: var(--teal-dim); }.filter-search { width: 100%; margin: 9px 0; padding: 8px 10px; border: 1px solid var(--border); border-radius: 7px; outline: 0; background: rgba(255,255,255,.035); font-size: 9px; }.record-card { margin-bottom: 6px; padding: 9px 10px; border: 1px solid var(--border); border-radius: 8px; background: rgba(255,255,255,.025); }.record-card.is-new { border-color: rgba(140,244,238,.25); }.record-left { display: flex; align-items: center; gap: 5px; }.record-time { color: var(--dim); font-size: 7px; }.record-type { padding: 2px 5px; border-radius: 4px; font-size: 7px; }.record-store { margin-top: 5px; color: var(--muted); font-size: 8px; }.record-fields { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px; }.record-chip { padding: 2px 5px; border-radius: 4px; background: rgba(0,0,0,.22); color: var(--muted); font-size: 7px; }.record-chip b { color: rgba(255,255,255,.72); }.record-count { padding: 6px; text-align: center; color: var(--dim); font-size: 7px; }
 .review-hint { margin-bottom: 12px; color: var(--muted); font-size: 11px; line-height: 1.5; }.review-card { padding: 13px 14px; }.review-card .record-top { display: flex; align-items: center; justify-content: space-between; }.review-card .record-time { font-size: 10px; }.review-card .record-type { font-size: 10px; padding: 3px 7px; }.review-card .record-store { margin-top: 0; color: var(--text); font-weight: 700; font-size: 15px; }.review-card .record-chip { padding: 4px 8px; font-size: 10px; }.review-actions { margin-top: 10px; display: flex; gap: 8px; }.review-actions button { flex: 1; padding: 10px 0; border-radius: 7px; font-size: 11px; font-weight: 700; }.review-actions button:disabled { opacity: .5; }.review-confirm { background: var(--teal-dim); color: var(--teal); border: 1px solid rgba(140,244,238,.3); }.review-discard { background: rgba(244,112,112,.08); color: var(--red); border: 1px solid rgba(244,112,112,.25); }
 
-/* Pantalla completa para el panel de agentes (usado sobre todo desde Revisar, donde el tamaño chico del sidebar hacía difícil leer los tickets). */
+/*
+ * Pantalla completa para el panel de agentes (usado sobre todo desde
+ * Revisar, donde el tamaño chico del sidebar hacía difícil leer los
+ * tickets). Sin tocar `top`/`right` — ya vienen bien puestos por
+ * `.agents-panel` (72px/16px en desktop, respetando la cabecera flotante;
+ * ajustados aparte en el media query de mobile) — solo se estira hacia la
+ * izquierda y hacia abajo con el mismo margen de 16px, y el panel pasa a
+ * layout flex para que el contenido llene el alto real sin calcular vh a
+ * mano (evita que quede una franja vacía o corte contenido si cambia el
+ * alto de la cabecera o de las pestañas).
+ */
 .panel-fullscreen-toggle { margin-left: auto; padding: 0 9px; color: var(--muted); font-size: 13px; }.panel-fullscreen-toggle:hover { color: var(--teal); }
-.agents-panel-fullscreen { top: 0; right: 0; left: 0; bottom: 0; width: 100vw; height: 100vh; max-width: none; border-radius: 0; }
-.agents-panel-fullscreen .panel-scroll { max-height: calc(100vh - 43px - 42px); }
+.agents-panel-fullscreen { left: 16px; bottom: 16px; width: auto; max-width: none; display: flex; flex-direction: column; }
+.agents-panel-fullscreen .agents-panel-toggle { flex: 0 0 auto; }
+.agents-panel-fullscreen .agents-panel-content { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.agents-panel-fullscreen .panel-tabs { flex: 0 0 auto; height: auto; padding: 8px 10px 0; }
+.agents-panel-fullscreen .panel-tabs button { padding: 0 13px 10px; font-size: 13px; }
+.agents-panel-fullscreen .panel-tabs em { padding: 2px 6px; font-size: 10px; }
+.agents-panel-fullscreen .panel-scroll { flex: 1; min-height: 0; max-height: none; }
 .agents-panel-fullscreen .review-hint { font-size: 13px; }
 .agents-panel-fullscreen .review-card { padding: 18px 20px; }
 .agents-panel-fullscreen .review-card .record-store { font-size: 19px; }
@@ -118,6 +133,7 @@ button { border: 0; background: none; cursor: pointer; }
   .api-banner { top: calc(60px + env(safe-area-inset-top)); }.canvas-intro { top: 72px; left: 16px; }.canvas-widgets { min-width: 100%; min-height: 100%; padding: 104px 12px 150px; display: flex; flex-direction: column; gap: 10px; }.widget-position { position: relative!important; inset: auto!important; width: 100%!important; height: 180px!important; }.widget-position:has(.widget-type-tag.kpi) { height: 140px!important; }.widget-head { cursor: default; }.resize-handle { display: none; }
   .fab { right: 12px; bottom: 116px; width: 42px; padding: 0; justify-content: center; }.fab span { display: none; }.ai-dock { width: calc(100vw - 24px); min-width: 0; min-height: 60px; bottom: calc(20px + env(safe-area-inset-bottom)); }.ai-dock input { font-size: 10px; }
   .agents-panel { top: calc(65px + env(safe-area-inset-top)); right: 11px; width: calc(100vw - 22px); }.panel-scroll { max-height: 45vh; }.map-legend { bottom: calc(104px + env(safe-area-inset-bottom)); left: 11px; padding: 8px; gap: 8px; }.map-legend span { font-size: 7px; }.leaflet-control-attribution { display: none; }
+  .agents-panel-fullscreen { left: 11px; bottom: calc(11px + env(safe-area-inset-bottom)); width: auto; }
   .location-overlay { padding: 10px; }.location-editor { max-height: calc(100dvh - 20px); padding: 14px; }.location-fields { grid-template-columns: 1fr; }.location-map { height: 250px; }
   .onboarding-shell { place-items: start center; padding: 76px 12px 22px; overflow-y: auto; }.onboarding-header { top: 16px; left: 18px; right: 18px; }.onboarding-brand img { width: 28px; height: 28px; }.onboarding-card { min-height: calc(100dvh - 98px); border-radius: 18px; }.onboarding-step-label { padding: 16px 20px 0; }.onboarding-content { min-height: calc(100dvh - 145px); padding: 32px 22px 24px; }.onboarding-content h1 { font-size: 30px; }.onboarding-content>p { font-size: 11px; }.onboarding-detail { grid-template-columns: 38px 1fr; }.onboarding-download { grid-column: 1/-1; text-align: center; }.starter-widgets { grid-template-columns: 1fr; }.starter-widgets div { min-height: 76px; }.onboarding-actions { gap: 10px; }.onboarding-primary,.onboarding-secondary { padding-inline: 13px; font-size: 10px; }.onboarding-reminder { bottom: 90px; }
 }
