@@ -103,5 +103,15 @@ export function useCloudData(idToken: string) {
     }
   }, [idToken, refresh]);
 
-  return { tickets, agents, codes, widgets, widgetData, error, loading, refresh, refreshAgents, createWidget, deleteWidget, updateAgentLocation };
+  const reviewTicket = useCallback(async (ticketId: string, capturedAt: string, action: "confirm" | "discard") => {
+    try {
+      await api.reviewTicket(idToken, ticketId, capturedAt, action);
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      throw err;
+    }
+  }, [idToken, refresh]);
+
+  return { tickets, agents, codes, widgets, widgetData, error, loading, refresh, refreshAgents, createWidget, deleteWidget, updateAgentLocation, reviewTicket };
 }

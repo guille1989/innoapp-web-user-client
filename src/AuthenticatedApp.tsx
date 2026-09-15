@@ -131,7 +131,7 @@ export function AuthenticatedApp() {
           </div>
         )}
         <DashboardView active={view === "dashboard"} widgets={widgets} events={events} onRemoveWidget={(id) => void cloud.deleteWidget(id)} onOpenBuilder={() => setActiveSheet("builder")} />
-        <RobotsView active={view === "robots"} events={events} latestEventId={latestEventId} robots={robots} codes={cloud.codes} onUpdateLocation={cloud.updateAgentLocation} />
+        <RobotsView active={view === "robots"} events={events} latestEventId={latestEventId} robots={robots} codes={cloud.codes} tickets={cloud.tickets} onUpdateLocation={cloud.updateAgentLocation} onReviewTicket={cloud.reviewTicket} />
       </main>
       <Overlay open={activeSheet !== null} onClick={() => setActiveSheet(null)} />
       <AiSheet open={activeSheet === "ai"} onOpen={() => setActiveSheet("ai")} onClose={() => setActiveSheet(null)} events={events} onCreateWidget={addWidget} idToken={idToken!} />

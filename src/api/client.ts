@@ -4,7 +4,7 @@ export interface ApiTicket {
   ticketId: string;
   port: string;
   capturedAt: string;
-  status: "pending" | "parsed" | "needs_review" | "failed";
+  status: "pending" | "parsed" | "needs_review" | "failed" | "discarded";
   items?: Array<{ description?: string; quantity?: number; unitPrice?: number; subtotal?: number }>;
   total?: number;
   discount?: number;
@@ -92,6 +92,17 @@ export const api = {
   updateOnboarding: (token: string, action: OnboardingAction) =>
     request<{ onboarding: ApiOnboardingState }>(token, "/me/onboarding", { method: "PATCH", body: JSON.stringify({ action }) }),
   tickets: (token: string) => request<{ tickets: ApiTicket[] }>(token, "/tickets?limit=100"),
+  /**
+   * Confirmar o descartar un ticket `needs_review` — la única forma en que
+   * sale de ese estado. `capturedAt` se manda porque ya lo tiene el
+   * dashboard (viene con cada ticket) y el backend lo necesita para ubicar
+   * el registro en DynamoDB.
+   */
+  reviewTicket: (token: string, ticketId: string, capturedAt: string, action: "confirm" | "discard") =>
+    request<{ ticketId: string; status: ApiTicket["status"] }>(token, `/tickets/${encodeURIComponent(ticketId)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ action, capturedAt }),
+    }),
   agents: (token: string) => request<{ agents: ApiAgent[] }>(token, "/agents"),
   updateAgentLocation: (token: string, id: string, location: AgentLocation) =>
     request<{ agentId: string; location: AgentLocation }>(token, `/agents/${encodeURIComponent(id)}/location`, {

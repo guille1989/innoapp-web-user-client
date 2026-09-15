@@ -2,9 +2,10 @@ import { useMemo, useState } from "react";
 import { RobotList } from "./RobotList";
 import { RobotMap } from "./RobotMap";
 import { RecordsList } from "./RecordsList";
+import { NeedsReviewList } from "./NeedsReviewList";
 import { LocationEditor } from "./LocationEditor";
 import type { BusinessEvent, Robot } from "../../types";
-import type { AgentLocation, ApiActivationCode } from "../../api/client";
+import type { AgentLocation, ApiActivationCode, ApiTicket } from "../../api/client";
 import { AGENT_DOWNLOAD_URL, AGENT_VERSION } from "./agentInstall";
 
 interface RobotsViewProps {
@@ -13,17 +14,20 @@ interface RobotsViewProps {
   latestEventId: string | null;
   robots: Robot[];
   codes: ApiActivationCode[];
+  tickets: ApiTicket[];
   onUpdateLocation: (agentId: string, location: AgentLocation) => Promise<void>;
+  onReviewTicket: (ticketId: string, capturedAt: string, action: "confirm" | "discard") => Promise<void>;
 }
 
-type PanelTab = "install" | "agents" | "codes" | "records";
-export function RobotsView({ active, events, latestEventId, robots, codes, onUpdateLocation }: RobotsViewProps) {
+type PanelTab = "install" | "agents" | "codes" | "records" | "review";
+export function RobotsView({ active, events, latestEventId, robots, codes, tickets, onUpdateLocation, onReviewTicket }: RobotsViewProps) {
   const [panelOpen, setPanelOpen] = useState(true);
   const [tab, setTab] = useState<PanelTab>("install");
   const [copied, setCopied] = useState<string | null>(null);
   const [editingLocation, setEditingLocation] = useState<Robot | null>(null);
   const online = useMemo(() => robots.filter((robot) => robot.status === "online").length, [robots]);
   const unusedCodes = codes.filter((code) => code.status === "unused");
+  const needsReviewCount = useMemo(() => tickets.filter((t) => t.status === "needs_review").length, [tickets]);
 
   async function copyCode(code: string) {
     await navigator.clipboard.writeText(code);
@@ -47,6 +51,7 @@ export function RobotsView({ active, events, latestEventId, robots, codes, onUpd
               <button className={tab === "agents" ? "active" : ""} onClick={() => setTab("agents")}>Agentes</button>
               <button className={tab === "codes" ? "active" : ""} onClick={() => setTab("codes")}>Códigos <em>{unusedCodes.length}</em></button>
               <button className={tab === "records" ? "active" : ""} onClick={() => setTab("records")}>Registros</button>
+              <button className={tab === "review" ? "active" : ""} onClick={() => setTab("review")}>Revisar{needsReviewCount > 0 && <em>{needsReviewCount}</em>}</button>
             </nav>
             {tab === "install" && (
               <div className="panel-scroll install-panel">
@@ -72,6 +77,7 @@ export function RobotsView({ active, events, latestEventId, robots, codes, onUpd
             {tab === "agents" && <div className="panel-scroll"><RobotList robots={robots} onConfigureLocation={setEditingLocation} />{robots.length === 0 && <div className="empty-state">Todavía no hay agentes activados.</div>}</div>}
             {tab === "codes" && <div className="panel-scroll codes-panel"><p>Utiliza un código para vincular un nuevo agente.</p>{unusedCodes.map((code) => <button key={code.code} className="activation-code" onClick={() => void copyCode(code.code)}><span className="mono">{code.code}</span><small>{copied === code.code ? "Copiado" : "Copiar"}</small></button>)}{unusedCodes.length === 0 && <div className="empty-state">No quedan códigos disponibles.</div>}</div>}
             {tab === "records" && <div className="panel-scroll records-panel"><RecordsList events={events} latestEventId={latestEventId} /></div>}
+            {tab === "review" && <div className="panel-scroll records-panel"><NeedsReviewList tickets={tickets} onReview={onReviewTicket} /></div>}
           </div>
         )}
       </aside>
