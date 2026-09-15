@@ -6,7 +6,12 @@ import type { Aggregation, AggregatableField, BusinessEvent, GroupField, Widget,
 export type WidgetIntent = Omit<Widget, "id">;
 
 export function parseWidgetIntent(q: string): WidgetIntent | null {
-  const wantsChart = /gr[aá]fica|barras|comparar|l[ií]nea|dona|proporci[oó]n|distribuci[oó]n/.test(q);
+  // Alguien pidiendo el eje x en tiempo ("días", "meses", "por fecha") quiere
+  // una línea temporal aunque no diga la palabra "línea" — sin esto el tipo
+  // caía en Barras y el grupo por defecto era "puerto", nada que ver con lo
+  // pedido.
+  const wantsTemporal = /\bd[ií]as?\b|\bsemanas?\b|\bmes(es)?\b|\btiempo\b|por fecha/.test(q);
+  const wantsChart = wantsTemporal || /gr[aá]fica|barras|comparar|l[ií]nea|dona|proporci[oó]n|distribuci[oó]n/.test(q);
   const wantsKpi = /kpi|total(es)?\b/.test(q);
   if (!wantsChart && !wantsKpi) return null;
 
@@ -25,7 +30,7 @@ export function parseWidgetIntent(q: string): WidgetIntent | null {
 
   let type: WidgetType = "kpi";
   if (/dona|proporci[oó]n|distribuci[oó]n/.test(q)) type = "donut";
-  else if (/l[ií]nea/.test(q)) type = "line";
+  else if (/l[ií]nea/.test(q) || wantsTemporal) type = "line";
   else if (wantsChart) type = "bar";
   if (type === "line") group = "day";
   else if (type !== "kpi" && !group) group = "port";
