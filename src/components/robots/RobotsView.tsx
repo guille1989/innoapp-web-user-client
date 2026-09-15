@@ -22,6 +22,7 @@ interface RobotsViewProps {
 type PanelTab = "install" | "agents" | "codes" | "records" | "review";
 export function RobotsView({ active, events, latestEventId, robots, codes, tickets, onUpdateLocation, onReviewTicket }: RobotsViewProps) {
   const [panelOpen, setPanelOpen] = useState(true);
+  const [fullscreen, setFullscreen] = useState(false);
   const [tab, setTab] = useState<PanelTab>("install");
   const [copied, setCopied] = useState<string | null>(null);
   const [editingLocation, setEditingLocation] = useState<Robot | null>(null);
@@ -40,7 +41,7 @@ export function RobotsView({ active, events, latestEventId, robots, codes, ticke
       <RobotMap active={active} robots={robots} />
       <div className="map-vignette" />
       <div className="map-legend glass"><span><i className="online" />Activo</span><span><i className="warn" />Intermitente</span><span><i className="offline" />Inactivo</span></div>
-      <aside className={`agents-panel glass${panelOpen ? " open" : ""}`}>
+      <aside className={`agents-panel glass${panelOpen ? " open" : ""}${fullscreen ? " agents-panel-fullscreen" : ""}`}>
         <button className="agents-panel-toggle" onClick={() => setPanelOpen((value) => !value)} aria-expanded={panelOpen}>
           <span><i className="online" /> {online} / {robots.length} agentes activos</span><b>{panelOpen ? "−" : "+"}</b>
         </button>
@@ -52,6 +53,14 @@ export function RobotsView({ active, events, latestEventId, robots, codes, ticke
               <button className={tab === "codes" ? "active" : ""} onClick={() => setTab("codes")}>Códigos <em>{unusedCodes.length}</em></button>
               <button className={tab === "records" ? "active" : ""} onClick={() => setTab("records")}>Registros</button>
               <button className={tab === "review" ? "active" : ""} onClick={() => setTab("review")}>Revisar{needsReviewCount > 0 && <em>{needsReviewCount}</em>}</button>
+              <button
+                className="panel-fullscreen-toggle"
+                onClick={() => setFullscreen((value) => !value)}
+                title={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
+                aria-label={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
+              >
+                {fullscreen ? "⤡" : "⤢"}
+              </button>
             </nav>
             {tab === "install" && (
               <div className="panel-scroll install-panel">
