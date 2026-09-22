@@ -4,6 +4,7 @@ import { RobotMap } from "./RobotMap";
 import { RecordsList } from "./RecordsList";
 import { NeedsReviewList } from "./NeedsReviewList";
 import { LocationEditor } from "./LocationEditor";
+import { TicketImageViewer } from "./TicketImageViewer";
 import type { BusinessEvent, Robot } from "../../types";
 import type { AgentLocation, ApiActivationCode, ApiTicket } from "../../api/client";
 import { AGENT_DOWNLOAD_URL, AGENT_VERSION } from "./agentInstall";
@@ -27,6 +28,7 @@ export function RobotsView({ active, events, latestEventId, robots, codes, ticke
   const [tab, setTab] = useState<PanelTab>("install");
   const [copied, setCopied] = useState<string | null>(null);
   const [editingLocation, setEditingLocation] = useState<Robot | null>(null);
+  const [viewingImage, setViewingImage] = useState<ApiTicket | null>(null);
   const online = useMemo(() => robots.filter((robot) => robot.status === "online").length, [robots]);
   const unusedCodes = codes.filter((code) => code.status === "unused");
   const needsReviewCount = useMemo(() => tickets.filter((t) => t.status === "needs_review").length, [tickets]);
@@ -87,11 +89,12 @@ export function RobotsView({ active, events, latestEventId, robots, codes, ticke
             {tab === "agents" && <div className="panel-scroll"><RobotList robots={robots} onConfigureLocation={setEditingLocation} />{robots.length === 0 && <div className="empty-state">Todavía no hay agentes activados.</div>}</div>}
             {tab === "codes" && <div className="panel-scroll codes-panel"><p>Utiliza un código para vincular un nuevo agente.</p>{unusedCodes.map((code) => <button key={code.code} className="activation-code" onClick={() => void copyCode(code.code)}><span className="mono">{code.code}</span><small>{copied === code.code ? "Copiado" : "Copiar"}</small></button>)}{unusedCodes.length === 0 && <div className="empty-state">No quedan códigos disponibles.</div>}</div>}
             {tab === "records" && <div className="panel-scroll records-panel"><RecordsList events={events} latestEventId={latestEventId} /></div>}
-            {tab === "review" && <div className="panel-scroll records-panel"><NeedsReviewList tickets={tickets} idToken={idToken} onReview={onReviewTicket} /></div>}
+            {tab === "review" && <div className="panel-scroll records-panel"><NeedsReviewList tickets={tickets} onReview={onReviewTicket} onViewImage={setViewingImage} /></div>}
           </div>
         )}
       </aside>
       {editingLocation && <LocationEditor robot={editingLocation} onClose={() => setEditingLocation(null)} onSave={onUpdateLocation} />}
+      {viewingImage && <TicketImageViewer ticket={viewingImage} idToken={idToken} onClose={() => setViewingImage(null)} />}
     </section>
   );
 }

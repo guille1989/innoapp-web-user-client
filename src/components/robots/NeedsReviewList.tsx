@@ -1,24 +1,28 @@
 import { useState } from "react";
 import { fmtAmount } from "../../data/format";
 import type { ApiTicket } from "../../api/client";
-import { TicketImageViewer } from "./TicketImageViewer";
 
 interface NeedsReviewListProps {
   tickets: ApiTicket[];
-  idToken: string;
   onReview: (ticketId: string, capturedAt: string, action: "confirm" | "discard") => Promise<void>;
+  onViewImage: (ticket: ApiTicket) => void;
 }
 
 /**
  * `needs_review` es lo que resolvió el fallback de Bedrock — un LLM puede
  * alucinar de forma internamente consistente, así que no cuenta como venta
  * confiable hasta que el dueño del negocio lo confirme (o lo descarte si
- * no era una venta real). El botón "Ver imagen" abre el ticket-imagen
- * reconstruido (`TicketImageViewer`) para comparar contra el papel real.
+ * no era una venta real). El botón "Ver imagen" delega a `RobotsView`
+ * (`onViewImage`) en vez de abrir el modal acá mismo — igual que
+ * `onConfigureLocation` en `RobotList` — porque este componente vive dentro
+ * de `.agents-panel`, que tiene `backdrop-filter` (clase `glass`) y por eso
+ * se vuelve el containing block de cualquier `position: fixed` hijo: un
+ * modal nacido acá adentro queda atrapado en el panel en vez de cubrir toda
+ * la pantalla. `TicketImageViewer` necesita montarse como hermano de
+ * `.agents-panel`, no como descendiente.
  */
-export function NeedsReviewList({ tickets, idToken, onReview }: NeedsReviewListProps) {
+export function NeedsReviewList({ tickets, onReview, onViewImage }: NeedsReviewListProps) {
   const [pending, setPending] = useState<string | null>(null);
-  const [viewingImage, setViewingImage] = useState<ApiTicket | null>(null);
   const needsReview = tickets.filter((t) => t.status === "needs_review").slice().reverse();
 
   async function act(ticket: ApiTicket, action: "confirm" | "discard") {
@@ -60,7 +64,7 @@ export function NeedsReviewList({ tickets, idToken, onReview }: NeedsReviewListP
               {(ticket.items?.length ?? 0) === 0 && <span className="record-chip">sin ítems extraídos</span>}
             </div>
             <div className="review-actions">
-              <button className="review-view-image" disabled={busy} onClick={() => setViewingImage(ticket)}>
+              <button className="review-view-image" disabled={busy} onClick={() => onViewImage(ticket)}>
                 Ver imagen
               </button>
               <button className="review-confirm" disabled={busy} onClick={() => void act(ticket, "confirm")}>
@@ -73,7 +77,6 @@ export function NeedsReviewList({ tickets, idToken, onReview }: NeedsReviewListP
           </div>
         );
       })}
-      {viewingImage && <TicketImageViewer ticket={viewingImage} idToken={idToken} onClose={() => setViewingImage(null)} />}
     </>
   );
 }
