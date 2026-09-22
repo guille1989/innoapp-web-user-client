@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { fmtAmount } from "../../data/format";
 import type { ApiTicket } from "../../api/client";
+import { TicketImageViewer } from "./TicketImageViewer";
 
 interface NeedsReviewListProps {
   tickets: ApiTicket[];
+  idToken: string;
   onReview: (ticketId: string, capturedAt: string, action: "confirm" | "discard") => Promise<void>;
 }
 
@@ -11,12 +13,12 @@ interface NeedsReviewListProps {
  * `needs_review` es lo que resolvió el fallback de Bedrock — un LLM puede
  * alucinar de forma internamente consistente, así que no cuenta como venta
  * confiable hasta que el dueño del negocio lo confirme (o lo descarte si
- * no era una venta real). Sin la imagen del ticket todavía — con lo que se
- * extrajo alcanza para el caso más común; si hace falta comparar contra el
- * papel, se agrega después.
+ * no era una venta real). El botón "Ver imagen" abre el ticket-imagen
+ * reconstruido (`TicketImageViewer`) para comparar contra el papel real.
  */
-export function NeedsReviewList({ tickets, onReview }: NeedsReviewListProps) {
+export function NeedsReviewList({ tickets, idToken, onReview }: NeedsReviewListProps) {
   const [pending, setPending] = useState<string | null>(null);
+  const [viewingImage, setViewingImage] = useState<ApiTicket | null>(null);
   const needsReview = tickets.filter((t) => t.status === "needs_review").slice().reverse();
 
   async function act(ticket: ApiTicket, action: "confirm" | "discard") {
@@ -58,6 +60,9 @@ export function NeedsReviewList({ tickets, onReview }: NeedsReviewListProps) {
               {(ticket.items?.length ?? 0) === 0 && <span className="record-chip">sin ítems extraídos</span>}
             </div>
             <div className="review-actions">
+              <button className="review-view-image" disabled={busy} onClick={() => setViewingImage(ticket)}>
+                Ver imagen
+              </button>
               <button className="review-confirm" disabled={busy} onClick={() => void act(ticket, "confirm")}>
                 {busy ? "…" : "Confirmar"}
               </button>
@@ -68,6 +73,7 @@ export function NeedsReviewList({ tickets, onReview }: NeedsReviewListProps) {
           </div>
         );
       })}
+      {viewingImage && <TicketImageViewer ticket={viewingImage} idToken={idToken} onClose={() => setViewingImage(null)} />}
     </>
   );
 }

@@ -15,12 +15,13 @@ interface RobotsViewProps {
   robots: Robot[];
   codes: ApiActivationCode[];
   tickets: ApiTicket[];
+  idToken: string;
   onUpdateLocation: (agentId: string, location: AgentLocation) => Promise<void>;
   onReviewTicket: (ticketId: string, capturedAt: string, action: "confirm" | "discard") => Promise<void>;
 }
 
 type PanelTab = "install" | "agents" | "codes" | "records" | "review";
-export function RobotsView({ active, events, latestEventId, robots, codes, tickets, onUpdateLocation, onReviewTicket }: RobotsViewProps) {
+export function RobotsView({ active, events, latestEventId, robots, codes, tickets, idToken, onUpdateLocation, onReviewTicket }: RobotsViewProps) {
   const [panelOpen, setPanelOpen] = useState(true);
   const [fullscreen, setFullscreen] = useState(false);
   const [tab, setTab] = useState<PanelTab>("install");
@@ -86,7 +87,7 @@ export function RobotsView({ active, events, latestEventId, robots, codes, ticke
             {tab === "agents" && <div className="panel-scroll"><RobotList robots={robots} onConfigureLocation={setEditingLocation} />{robots.length === 0 && <div className="empty-state">Todavía no hay agentes activados.</div>}</div>}
             {tab === "codes" && <div className="panel-scroll codes-panel"><p>Utiliza un código para vincular un nuevo agente.</p>{unusedCodes.map((code) => <button key={code.code} className="activation-code" onClick={() => void copyCode(code.code)}><span className="mono">{code.code}</span><small>{copied === code.code ? "Copiado" : "Copiar"}</small></button>)}{unusedCodes.length === 0 && <div className="empty-state">No quedan códigos disponibles.</div>}</div>}
             {tab === "records" && <div className="panel-scroll records-panel"><RecordsList events={events} latestEventId={latestEventId} /></div>}
-            {tab === "review" && <div className="panel-scroll records-panel"><NeedsReviewList tickets={tickets} onReview={onReviewTicket} /></div>}
+            {tab === "review" && <div className="panel-scroll records-panel"><NeedsReviewList tickets={tickets} idToken={idToken} onReview={onReviewTicket} /></div>}
           </div>
         )}
       </aside>

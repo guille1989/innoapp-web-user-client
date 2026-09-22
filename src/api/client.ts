@@ -30,6 +30,7 @@ export interface AgentLocation {
 }
 
 export interface ApiActivationCode { code: string; status: "unused" | "used"; createdAt: string; usedAt?: string; agentId?: string }
+export interface ApiTicketImage { ticketId: string; width: number; height: number; png: string }
 export interface ApiWidget {
   widgetId: string;
   name: string;
@@ -103,6 +104,14 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify({ action, capturedAt }),
     }),
+  /**
+   * Reconstruye la imagen del ticket-imagen (Loggro y similares imprimen la
+   * factura entera como bitmap) para comparar contra lo que extrajo Bedrock
+   * antes de confirmar/descartar. 404 si el ticket se capturó como texto —
+   * no hay nada que reconstruir en ese caso.
+   */
+  ticketImage: (token: string, ticketId: string, capturedAt: string) =>
+    request<ApiTicketImage>(token, `/tickets/${encodeURIComponent(ticketId)}/image?capturedAt=${encodeURIComponent(capturedAt)}`),
   agents: (token: string) => request<{ agents: ApiAgent[] }>(token, "/agents"),
   updateAgentLocation: (token: string, id: string, location: AgentLocation) =>
     request<{ agentId: string; location: AgentLocation }>(token, `/agents/${encodeURIComponent(id)}/location`, {
