@@ -5,15 +5,27 @@ import type { Aggregation, AggregatableField, BusinessEvent, GroupField, Widget,
 
 export type WidgetIntent = Omit<Widget, "id">;
 
+// Solo se crea un widget cuando el mensaje nombra una visualización. Antes
+// bastaba con "día", "total" o "comparar", y una pregunta como "¿qué día
+// vendimos más?" terminaba creando una Línea en vez de ir al asistente a
+// buscar la respuesta. Las palabras sueltas de abajo (temporales, "torta",
+// "proporción"…) solo eligen el tipo una vez que ya se pidió un widget.
+const VIZ_RE = /gr[aá]fic[ao]|widget|kpi|indicador|barras|l[ií]nea|dona|\bpie\b/;
+const KPI_RE = /kpi|indicador/;
+
+// No hay tipo "pie": la dona es el único gráfico circular, así que "pie",
+// "torta", "pastel", etc. van a dona. Sin esto "gráfica tipo pie" caía en
+// Barras (el default de cualquier "gráfica").
+const DONUT_RE = /dona|\bpie\b|torta|pastel|queso|circular|proporci[oó]n|distribuci[oó]n/;
+
 export function parseWidgetIntent(q: string): WidgetIntent | null {
+  if (!VIZ_RE.test(q)) return null;
+
   // Alguien pidiendo el eje x en tiempo ("días", "meses", "por fecha") quiere
   // una línea temporal aunque no diga la palabra "línea" — sin esto el tipo
   // caía en Barras y el grupo por defecto era "puerto", nada que ver con lo
   // pedido.
   const wantsTemporal = /\bd[ií]as?\b|\bsemanas?\b|\bmes(es)?\b|\btiempo\b|por fecha/.test(q);
-  const wantsChart = wantsTemporal || /gr[aá]fica|barras|comparar|l[ií]nea|dona|proporci[oó]n|distribuci[oó]n/.test(q);
-  const wantsKpi = /kpi|total(es)?\b/.test(q);
-  if (!wantsChart && !wantsKpi) return null;
 
   let field: AggregatableField = "event_count";
   if (/venta|monto|ingreso|total/.test(q)) field = "total";
@@ -28,10 +40,10 @@ export function parseWidgetIntent(q: string): WidgetIntent | null {
   else if (/parser|parseo/.test(q)) group = "parsedBy";
   else if (/producto|descripci[oó]n/.test(q)) group = "description";
 
-  let type: WidgetType = "kpi";
-  if (/dona|proporci[oó]n|distribuci[oó]n/.test(q)) type = "donut";
+  let type: WidgetType = "bar";
+  if (KPI_RE.test(q)) type = "kpi";
+  else if (DONUT_RE.test(q)) type = "donut";
   else if (/l[ií]nea/.test(q) || wantsTemporal) type = "line";
-  else if (wantsChart) type = "bar";
   if (type === "line") group = "day";
   else if (type !== "kpi" && !group) group = "port";
 
