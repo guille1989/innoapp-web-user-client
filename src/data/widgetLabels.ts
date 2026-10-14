@@ -27,4 +27,13 @@ export const GROUP_LABELS: Record<GroupField, string> = {
   day: "Día",
 };
 
-export const CHART_PALETTE = ["#4FD8C4", "#A79BFF", "#FFB454", "#FF6B6B", "#6FA8FF", "#8892A3"];
+/**
+ * Colores por categoría (dona). Validados contra el fondo de los widgets
+ * (#111318) con el validador del skill dataviz: misma luminosidad, croma
+ * suficiente y separables con daltonismo (protan/deutan) entre vecinos en
+ * ESTE orden, incluido el cierre del anillo último→primero. Reordenarlos o
+ * agregar uno rompe esa garantía — se revalida antes. No incluye rojo: ese
+ * color queda para estados (error/caído). Lo que no entra va a "Otros", gris.
+ */
+export const CHART_PALETTE = ["#2aa198", "#9085e9", "#d95926", "#3987e5", "#c98500"];
+export const CHART_OTHER_COLOR = "#5d6472";

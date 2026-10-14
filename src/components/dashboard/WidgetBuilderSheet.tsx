@@ -122,7 +122,7 @@ export function WidgetBuilderSheet({ open, onClose, onCreate }: WidgetBuilderShe
           </div>
         )}
 
-        {type === "line" && <div className="temporal-hint"><span>Eje X</span><strong>Fecha de venta</strong><small>Podrás alternar entre día, semana y mes dentro del widget.</small></div>}
+        {type === "line" && <div className="temporal-hint"><span>Eje X</span><strong>Fecha de venta</strong><small>Dentro del widget podrás elegir el rango de fechas y agrupar por día, semana o mes.</small></div>}
 
         {type !== "kpi" && type !== "line" && (
           <div className="field">
