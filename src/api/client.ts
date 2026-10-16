@@ -40,7 +40,15 @@ export interface ApiWidget {
   createdAt: string;
 }
 export type ApiWidgetData = Array<{ label?: string; value: number }>;
-export interface ApiAssistantAnswer { answer: string }
+export interface ApiReportSection {
+  heading: string;
+  field: string;
+  aggregation: string;
+  groupBy?: string;
+  data: Array<{ label?: string; value: number }>;
+}
+export interface ApiReport { title: string; generatedAt: string; sections: ApiReportSection[] }
+export interface ApiAssistantAnswer { answer: string; report?: ApiReport }
 export interface ApiAssistantHistoryTurn { role: "user" | "assistant"; text: string }
 export interface ApiOnboardingState {
   version: 1;
