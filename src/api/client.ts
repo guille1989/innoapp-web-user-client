@@ -41,11 +41,14 @@ export interface ApiWidget {
 }
 export type ApiWidgetData = Array<{ label?: string; value: number }>;
 export interface ApiReportSection {
+  kind: "kpi" | "trend" | "ranking";
   heading: string;
   field: string;
   aggregation: string;
   groupBy?: string;
   data: Array<{ label?: string; value: number }>;
+  /** Solo KPIs con rango de fechas: valor del periodo anterior de igual duración. */
+  previous?: number;
 }
 export interface ApiReport { title: string; generatedAt: string; sections: ApiReportSection[] }
 export interface ApiAssistantAnswer { answer: string; report?: ApiReport }

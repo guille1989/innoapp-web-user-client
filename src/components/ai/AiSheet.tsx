@@ -15,6 +15,7 @@ interface AiSheetProps {
   events: BusinessEvent[];
   onCreateWidget: (cfg: Omit<Widget, "id">) => void;
   idToken: string;
+  businessName: string;
 }
 
 interface ChatMessage {
@@ -31,19 +32,19 @@ const SUGGESTED = [
 
 let msgSeq = 1;
 
-function ReportMessage({ answer, report }: { answer: string; report: ApiReport }) {
+function ReportMessage({ answer, report, businessName }: { answer: string; report: ApiReport; businessName: string }) {
   return (
     <>
       <div>{answer}</div>
       <div className="report-actions" style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-        <button className="chip" onClick={() => printReport(report)}>Ver / guardar PDF</button>
+        <button className="chip" onClick={() => printReport(report, answer, businessName)}>Ver / guardar PDF</button>
         <button className="chip" onClick={() => downloadReportCsv(report)}>Descargar CSV</button>
       </div>
     </>
   );
 }
 
-export function AiSheet({ open, onOpen, onClose, events, onCreateWidget, idToken }: AiSheetProps) {
+export function AiSheet({ open, onOpen, onClose, events, onCreateWidget, idToken, businessName }: AiSheetProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([{ id: msgSeq++, role: "ai", content: "Hola, soy tu asistente de datos. Puedo analizar las lecturas de tus agentes y crear widgets por ti." }]);
   const [input, setInput] = useState("");
   const [dockInput, setDockInput] = useState("");
@@ -91,7 +92,7 @@ export function AiSheet({ open, onOpen, onClose, events, onCreateWidget, idToken
     try {
       const { answer, report } = await api.assistantAsk(idToken, value, history);
       setTyping(false);
-      pushAiMessage(report ? <ReportMessage answer={answer} report={report} /> : answer);
+      pushAiMessage(report ? <ReportMessage answer={answer} report={report} businessName={businessName} /> : answer);
       const newTurns: ApiAssistantHistoryTurn[] = [
         { role: "user", text: value },
         { role: "assistant", text: answer },
