@@ -20,6 +20,8 @@ interface AiSheetProps {
   onCreateWidget: (cfg: Omit<Widget, "id">) => void;
   idToken: string;
   businessName: string;
+  /** El backend guardó un reporte nuevo: la lista de Reportes y el widget del dashboard se refrescan. */
+  onReportSaved: () => void;
 }
 
 interface ChatMessage {
@@ -49,7 +51,7 @@ function ReportMessage({ answer, report, businessName, saved }: { answer: string
   );
 }
 
-export function AiSheet({ open, onOpen, onClose, events, onCreateWidget, idToken, businessName }: AiSheetProps) {
+export function AiSheet({ open, onOpen, onClose, events, onCreateWidget, idToken, businessName, onReportSaved }: AiSheetProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([{ id: msgSeq++, role: "ai", content: "Hola, soy tu asistente de datos. Puedo analizar las lecturas de tus agentes y crear widgets por ti." }]);
   const [input, setInput] = useState("");
   const [dockInput, setDockInput] = useState("");
@@ -116,6 +118,7 @@ export function AiSheet({ open, onOpen, onClose, events, onCreateWidget, idToken
     try {
       const { answer, report, reportId } = await api.assistantAsk(idToken, value, history);
       setTyping(false);
+      if (reportId) onReportSaved();
       pushAiMessage(report ? <ReportMessage answer={answer} report={report} businessName={businessName} saved={Boolean(reportId)} /> : answer);
       const newTurns: ApiAssistantHistoryTurn[] = [
         { role: "user", text: value },

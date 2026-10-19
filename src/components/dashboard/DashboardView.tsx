@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { WidgetCard } from "./WidgetCard";
+import { ReportsWidgetCard } from "./ReportsWidgetCard";
+import type { ApiReportListItem } from "../../api/client";
 import { IconPlus } from "../icons";
 import type { BusinessEvent, Widget } from "../../types";
 
@@ -9,12 +11,18 @@ interface DashboardViewProps {
   events: BusinessEvent[];
   onRemoveWidget: (id: string) => void;
   onOpenBuilder: () => void;
+  reports: ApiReportListItem[];
+  idToken: string;
+  businessName: string;
+  onOpenReports: () => void;
 }
 
 interface WidgetLayout { x: number; y: number; w: number; h: number }
 type LayoutMap = Record<string, WidgetLayout>;
 type Interaction = { kind: "drag" | "resize"; id: string; startX: number; startY: number; initial: WidgetLayout };
 const STORAGE_KEY = "innoapp.widget-layout.v1";
+// La tarjeta de reportes no es un widget del backend: aparece sola cuando hay al menos un reporte guardado.
+const REPORTS_CARD_ID = "__reports";
 
 function loadLayout(): LayoutMap {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "{}") as LayoutMap; } catch { return {}; }
@@ -26,18 +34,20 @@ function defaultLayout(index: number, type: Widget["type"]): WidgetLayout {
   return { x: 48 + column * 340, y: 106 + row * 242, w: type === "kpi" ? 280 : 320, h: type === "kpi" ? 156 : 216 };
 }
 
-export function DashboardView({ active, widgets, events, onRemoveWidget, onOpenBuilder }: DashboardViewProps) {
+export function DashboardView({ active, widgets, events, onRemoveWidget, onOpenBuilder, reports, idToken, businessName, onOpenReports }: DashboardViewProps) {
   const [layout, setLayout] = useState<LayoutMap>(loadLayout);
   const [selected, setSelected] = useState<string | null>(null);
+  const hasReports = reports.length > 0;
   const interaction = useRef<Interaction | null>(null);
 
   useEffect(() => {
     setLayout((current) => {
       const next = { ...current };
       widgets.forEach((widget, index) => { if (!next[widget.id]) next[widget.id] = defaultLayout(index, widget.type); });
+      if (hasReports && !next[REPORTS_CARD_ID]) next[REPORTS_CARD_ID] = { ...defaultLayout(widgets.length, "bar"), w: 360, h: 260 };
       return next;
     });
-  }, [widgets]);
+  }, [widgets, hasReports]);
 
   useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(layout)); }, [layout]);
 
@@ -87,8 +97,13 @@ export function DashboardView({ active, widgets, events, onRemoveWidget, onOpenB
             </div>
           );
         })}
+        {hasReports && layout[REPORTS_CARD_ID] && (
+          <div className={`widget-position${selected === REPORTS_CARD_ID ? " selected" : ""}`} style={{ left: layout[REPORTS_CARD_ID].x, top: layout[REPORTS_CARD_ID].y, width: layout[REPORTS_CARD_ID].w, height: layout[REPORTS_CARD_ID].h }} onPointerDown={(e) => { e.stopPropagation(); setSelected(REPORTS_CARD_ID); }}>
+            <ReportsWidgetCard reports={reports} idToken={idToken} businessName={businessName} onOpenReports={onOpenReports} onDragStart={(e) => start("drag", REPORTS_CARD_ID, e)} onResizeStart={(e) => start("resize", REPORTS_CARD_ID, e)} />
+          </div>
+        )}
       </div>
-      {widgets.length === 0 && <div className="canvas-empty"><div className="empty-icon">＋</div><strong>Tu espacio de datos está vacío</strong><span>Añade un KPI o una gráfica para comenzar.</span><button onClick={onOpenBuilder}>Crear primer widget</button></div>}
+      {widgets.length === 0 && !hasReports && <div className="canvas-empty"><div className="empty-icon">＋</div><strong>Tu espacio de datos está vacío</strong><span>Añade un KPI o una gráfica para comenzar.</span><button onClick={onOpenBuilder}>Crear primer widget</button></div>}
       {active && <button data-tour="create-widget" className="fab glass" onClick={onOpenBuilder} aria-label="Agregar widget"><IconPlus /><span>Añadir widget</span></button>}
     </section>
   );

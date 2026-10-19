@@ -1,77 +1,41 @@
-import { useCallback, useEffect, useState } from "react";
-import { api, type ApiReportListItem } from "../../api/client";
-import { downloadReportCsv, printReport } from "../../lib/report";
+import { useEffect, useState } from "react";
+import type { ApiReportListItem } from "../../api/client";
+import { downloadStoredReportCsv, expiryLabel, openStoredReportPdf } from "../../lib/storedReports";
 
 interface ReportsViewProps {
   active: boolean;
   idToken: string;
   businessName: string;
+  reports: ApiReportListItem[];
+  loaded: boolean;
+  error: string | null;
+  onError: (message: string | null) => void;
+  onRefresh: () => Promise<void>;
+  onDelete: (reportId: string) => Promise<void>;
 }
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-function daysLeft(expiresAt: string): number {
-  return Math.max(0, Math.ceil((new Date(expiresAt).getTime() - Date.now()) / DAY_MS));
-}
-
-export function ReportsView({ active, idToken, businessName }: ReportsViewProps) {
-  const [reports, setReports] = useState<ApiReportListItem[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+export function ReportsView({ active, idToken, businessName, reports, loaded, error, onError, onRefresh, onDelete }: ReportsViewProps) {
   const [busyId, setBusyId] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    try {
-      const { reports: items } = await api.reports(idToken);
-      setReports(items);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudieron cargar los reportes");
-    }
-  }, [idToken]);
 
   // Se recarga cada vez que se abre la pestaña: un reporte nuevo se genera desde el chat, no desde acá.
   useEffect(() => {
-    if (active) void load();
-  }, [active, load]);
+    if (active) void onRefresh();
+  }, [active, onRefresh]);
 
-  async function openPdf(item: ApiReportListItem) {
-    // La ventana se abre en el click: tras el await el navegador la bloquearía como popup.
-    const w = window.open("", "_blank");
+  async function run(item: ApiReportListItem, action: () => Promise<void>, failure: string) {
     setBusyId(item.reportId);
     try {
-      const stored = await api.report(idToken, item.reportId);
-      printReport(stored.report, stored.summary, businessName, w);
+      await action();
     } catch (err) {
-      w?.close();
-      setError(err instanceof Error ? err.message : "No se pudo abrir el reporte");
+      onError(err instanceof Error ? err.message : failure);
     } finally {
       setBusyId(null);
     }
   }
 
-  async function downloadCsv(item: ApiReportListItem) {
-    setBusyId(item.reportId);
-    try {
-      const stored = await api.report(idToken, item.reportId);
-      downloadReportCsv(stored.report);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo descargar el reporte");
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  async function remove(item: ApiReportListItem) {
+  function remove(item: ApiReportListItem) {
     if (!window.confirm(`¿Borrar el reporte "${item.title}"?`)) return;
-    setBusyId(item.reportId);
-    try {
-      await api.deleteReport(idToken, item.reportId);
-      setReports((current) => current?.filter((r) => r.reportId !== item.reportId) ?? null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo borrar el reporte");
-    } finally {
-      setBusyId(null);
-    }
+    void run(item, () => onDelete(item.reportId), "No se pudo borrar el reporte");
   }
 
   return (
@@ -82,28 +46,23 @@ export function ReportsView({ active, idToken, businessName }: ReportsViewProps)
             <h2>Reportes</h2>
             <p>Los que genera el asistente quedan guardados 30 días y se borran solos. Pedile uno en el chat: "hazme un reporte de ventas de este mes".</p>
           </div>
-          <button className="chip" onClick={() => void load()}>Actualizar</button>
+          <button className="chip" onClick={() => void onRefresh()}>Actualizar</button>
         </header>
         {error && <div className="reports-error" role="alert">{error}</div>}
-        {reports === null && !error && <div className="empty-state">Cargando reportes…</div>}
-        {reports?.length === 0 && <div className="empty-state">Todavía no hay reportes guardados.</div>}
-        {reports?.map((item) => {
+        {!loaded && !error && <div className="empty-state">Cargando reportes…</div>}
+        {loaded && reports.length === 0 && <div className="empty-state">Todavía no hay reportes guardados.</div>}
+        {reports.map((item) => {
           const busy = busyId === item.reportId;
-          const left = daysLeft(item.expiresAt);
           return (
             <article className="report-row" key={item.reportId}>
               <div className="report-row-info">
                 <strong>{item.title}</strong>
-                <span>
-                  {new Date(item.createdAt).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })}
-                  {" · "}
-                  {left <= 1 ? "se borra hoy o mañana" : `se borra en ${left} días`}
-                </span>
+                <span>{new Date(item.createdAt).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })} · {expiryLabel(item.expiresAt)}</span>
               </div>
               <div className="report-row-actions">
-                <button className="chip" disabled={busy} onClick={() => void openPdf(item)}>Ver / guardar PDF</button>
-                <button className="chip" disabled={busy} onClick={() => void downloadCsv(item)}>CSV</button>
-                <button className="chip" disabled={busy} onClick={() => void remove(item)} aria-label={`Borrar ${item.title}`}>Borrar</button>
+                <button className="chip" disabled={busy} onClick={() => void run(item, () => openStoredReportPdf(idToken, item, businessName), "No se pudo abrir el reporte")}>Ver / guardar PDF</button>
+                <button className="chip" disabled={busy} onClick={() => void run(item, () => downloadStoredReportCsv(idToken, item), "No se pudo descargar el reporte")}>CSV</button>
+                <button className="chip" disabled={busy} onClick={() => remove(item)} aria-label={`Borrar ${item.title}`}>Borrar</button>
               </div>
             </article>
           );

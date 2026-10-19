@@ -6,6 +6,7 @@ import { DashboardView } from "./components/dashboard/DashboardView";
 import { WidgetBuilderSheet } from "./components/dashboard/WidgetBuilderSheet";
 import { RobotsView } from "./components/robots/RobotsView";
 import { ReportsView } from "./components/reports/ReportsView";
+import { useReports } from "./hooks/useReports";
 import { AiSheet } from "./components/ai/AiSheet";
 import { useCloudData } from "./hooks/useCloudData";
 import { useOnboarding } from "./hooks/useOnboarding";
@@ -59,6 +60,7 @@ export function AuthenticatedApp() {
   const [tourRun, setTourRun] = useState(0);
   const cloud = useCloudData(idToken!);
   const onboarding = useOnboarding(idToken!);
+  const reports = useReports(idToken!);
   const onboardingAct = onboarding.act;
   const events = useMemo(() => cloud.tickets.map(toEvent).sort((a, b) => a.ts - b.ts), [cloud.tickets]);
   const robots = useMemo(() => cloud.agents.map(toRobot), [cloud.agents]);
@@ -131,12 +133,12 @@ export function AuthenticatedApp() {
             {cloud.error && <button onClick={() => void cloud.refresh()}>Reintentar</button>}
           </div>
         )}
-        <DashboardView active={view === "dashboard"} widgets={widgets} events={events} onRemoveWidget={(id) => void cloud.deleteWidget(id)} onOpenBuilder={() => setActiveSheet("builder")} />
+        <DashboardView active={view === "dashboard"} widgets={widgets} events={events} onRemoveWidget={(id) => void cloud.deleteWidget(id)} onOpenBuilder={() => setActiveSheet("builder")} reports={reports.reports} idToken={idToken!} businessName={onboarding.me?.businessName ?? ""} onOpenReports={() => setView("reports")} />
         <RobotsView active={view === "robots"} events={events} latestEventId={latestEventId} robots={robots} codes={cloud.codes} tickets={cloud.tickets} idToken={idToken!} onUpdateLocation={cloud.updateAgentLocation} onReviewTicket={cloud.reviewTicket} />
-        <ReportsView active={view === "reports"} idToken={idToken!} businessName={onboarding.me?.businessName ?? ""} />
+        <ReportsView active={view === "reports"} idToken={idToken!} businessName={onboarding.me?.businessName ?? ""} reports={reports.reports} loaded={reports.loaded} error={reports.error} onError={reports.setError} onRefresh={reports.refresh} onDelete={reports.remove} />
       </main>
       <Overlay open={activeSheet !== null} onClick={() => setActiveSheet(null)} />
-      <AiSheet open={activeSheet === "ai"} onOpen={() => setActiveSheet("ai")} onClose={() => setActiveSheet(null)} events={events} onCreateWidget={addWidget} idToken={idToken!} businessName={onboarding.me?.businessName ?? ""} />
+      <AiSheet open={activeSheet === "ai"} onOpen={() => setActiveSheet("ai")} onClose={() => setActiveSheet(null)} events={events} onCreateWidget={addWidget} idToken={idToken!} businessName={onboarding.me?.businessName ?? ""} onReportSaved={() => void reports.refresh()} />
       <WidgetBuilderSheet open={activeSheet === "builder"} onClose={() => setActiveSheet(null)} onCreate={addWidget} />
       {onboardingState && !onboardingState.completedAt && (
         <OnboardingReminder connected={connected} hasTickets={cloud.tickets.length > 0} hasWidgets={cloud.widgets.length > 0} onContinue={() => setShowOnboarding(true)} />
