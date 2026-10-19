@@ -45,7 +45,7 @@ export function parseWidgetIntent(q: string): WidgetIntent | null {
   else if (DONUT_RE.test(q)) type = "donut";
   else if (/l[ií]nea/.test(q) || wantsTemporal) type = "line";
   if (type === "line") group = "day";
-  else if (type !== "kpi" && !group) group = "port";
+  else if (type !== "kpi" && !group) group = "agent";
 
   const agg: Aggregation = "sum";
   const title =

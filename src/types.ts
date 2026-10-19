@@ -50,6 +50,8 @@ export interface Widget {
   agg: Aggregation;
   group: GroupField | null;
   data?: AggregateRow[];
+  /** Clave del dato → texto a mostrar (ej. agentId → nombre del agente). Sin entrada se muestra la clave. */
+  keyLabels?: Record<string, string>;
 }
 
 export interface AggregateRow {

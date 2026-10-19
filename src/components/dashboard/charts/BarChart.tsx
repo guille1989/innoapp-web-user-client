@@ -135,12 +135,12 @@ export function BarChart({ widget: w }: { widget: Widget }) {
                 key={row.key}
                 className={`bar-row${active === index ? " active" : ""}${active !== null && active !== index ? " dimmed" : ""}`}
                 tabIndex={0}
-                aria-label={`${row.key}: ${formatWidgetValue(w.field, row.value)} ${metricLabel(w, row.value)}`}
+                aria-label={`${w.keyLabels?.[row.key] ?? row.key}:${formatWidgetValue(w.field, row.value)} ${metricLabel(w, row.value)}`}
                 onPointerEnter={(e) => setHover({ index, x: pointerX(e, e.currentTarget.parentElement) })}
                 onFocus={() => setHover((current) => (current?.index === index ? current : { index, x: size.width / 2 }))}
                 onBlur={() => setHover(null)}
               >
-                <span className="bar-row-label">{row.key}</span>
+                <span className="bar-row-label">{w.keyLabels?.[row.key] ?? row.key}</span>
                 <span className="bar-row-track">
                   <i style={{ width: `calc((100% - 46px) * ${ratio.toFixed(4)})` }} />
                   <b>{fmtAxis(row.value)}</b>
@@ -158,7 +158,7 @@ export function BarChart({ widget: w }: { widget: Widget }) {
             containerHeight={size.height}
             value={formatWidgetValue(w.field, activeRow.value)}
             unit={metricLabel(w, activeRow.value)}
-            label={activeRow.key}
+            label={w.keyLabels?.[activeRow.key] ?? activeRow.key}
             extra={additive && total > 0 ? `${((activeRow.value / total) * 100).toLocaleString("es-AR", { maximumFractionDigits: 1 })}% del total` : undefined}
           />
         )}

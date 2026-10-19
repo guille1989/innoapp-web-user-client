@@ -39,20 +39,21 @@ function assignSlots(memory: Map<string, number>, keys: string[]): number[] {
   return slots;
 }
 
-function buildSlices(rows: AggregateRow[], memory: Map<string, number>, additive: boolean): { slices: Slice[]; hidden: number } {
+function buildSlices(rows: AggregateRow[], memory: Map<string, number>, additive: boolean, keyLabels?: Record<string, string>): { slices: Slice[]; hidden: number } {
+  const nameOf = (key: string) => keyLabels?.[key] ?? key;
   const positive = rows.filter((row) => row.value > 0);
   const overflow = positive.length > CHART_PALETTE.length;
   const head = overflow ? positive.slice(0, CHART_PALETTE.length) : positive;
   const rest = overflow ? positive.slice(CHART_PALETTE.length) : [];
   const slots = assignSlots(memory, head.map((row) => row.key));
   const slices = head
-    .map((row, index) => ({ key: row.key, label: row.key, value: row.value, color: CHART_PALETTE[slots[index]], members: 1, slot: slots[index] }))
+    .map((row, index) => ({ key: row.key, label: nameOf(row.key), value: row.value, color: CHART_PALETTE[slots[index]], members: 1, slot: slots[index] }))
     .sort((a, b) => a.slot - b.slot)
     .map(({ slot: _slot, ...slice }) => slice);
   // "Otros" solo tiene sentido si los valores se pueden sumar (tickets, sumas);
   // un "promedio de los demás" sumado no significa nada.
   if (rest.length && additive) {
-    slices.push({ key: "__other__", label: rest.length === 1 ? rest[0].key : `Otros (${rest.length})`, value: rest.reduce((sum, row) => sum + row.value, 0), color: CHART_OTHER_COLOR, members: rest.length });
+    slices.push({ key: "__other__", label: rest.length === 1 ? nameOf(rest[0].key) : `Otros (${rest.length})`, value: rest.reduce((sum, row) => sum + row.value, 0), color: CHART_OTHER_COLOR, members: rest.length });
     return { slices, hidden: 0 };
   }
   return { slices, hidden: rest.length };
@@ -76,7 +77,7 @@ export function DonutChart({ widget: w }: { widget: Widget }) {
   const [ringRef, size] = useElementSize<HTMLDivElement>();
   const additive = isAdditive(w);
 
-  const { slices, hidden } = buildSlices(rows, slotMemory.current, additive);
+  const { slices, hidden } = buildSlices(rows, slotMemory.current, additive, w.keyLabels);
   if (slices.length === 0) return <div className="donut-wrap"><span className="widget-empty">Sin datos para esta agrupación</span></div>;
 
   const total = slices.reduce((sum, slice) => sum + slice.value, 0);

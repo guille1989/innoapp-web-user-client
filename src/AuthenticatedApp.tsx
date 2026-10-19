@@ -63,15 +63,25 @@ export function AuthenticatedApp() {
   const onboardingAct = onboarding.act;
   const events = useMemo(() => cloud.tickets.map(toEvent).sort((a, b) => a.ts - b.ts), [cloud.tickets]);
   const robots = useMemo(() => cloud.agents.map(toRobot), [cloud.agents]);
-  const widgets = useMemo(() => cloud.widgets.map((w: ApiWidget): Widget => ({
-    id: w.widgetId,
-    type: w.visualization,
-    title: w.name,
-    field: VALID_FIELDS.has(w.metric.field as Widget["field"]) ? w.metric.field as Widget["field"] : "event_count",
-    agg: w.metric.aggregation,
-    group: w.groupBy && VALID_GROUPS.has(w.groupBy as NonNullable<Widget["group"]>) ? w.groupBy as Widget["group"] : null,
-    data: cloud.widgetData[w.widgetId]?.map((row) => ({ key: row.label ?? "total", value: row.value })) ?? [],
-  })), [cloud.widgets, cloud.widgetData]);
+  const widgets = useMemo(() => {
+    // Al agrupar por agente el backend devuelve el agentId (un UUID) y "(sin dato)" para los tickets sin
+    // agentId (api-key compartida legacy): los datos quedan con su clave cruda (los gráficos con rango
+    // vuelven a pedirlos) y `keyLabels` traduce la clave al nombre del agente al mostrarla.
+    const agentLabels: Record<string, string> = { "(sin dato)": "Sin agente", ...Object.fromEntries(cloud.agents.map((agent) => [agent.agentId, agent.name])) };
+    return cloud.widgets.map((w: ApiWidget): Widget => {
+      const group = w.groupBy && VALID_GROUPS.has(w.groupBy as NonNullable<Widget["group"]>) ? w.groupBy as Widget["group"] : null;
+      return {
+        id: w.widgetId,
+        type: w.visualization,
+        title: w.name,
+        field: VALID_FIELDS.has(w.metric.field as Widget["field"]) ? w.metric.field as Widget["field"] : "event_count",
+        agg: w.metric.aggregation,
+        group,
+        keyLabels: group === "agent" ? agentLabels : undefined,
+        data: cloud.widgetData[w.widgetId]?.map((row) => ({ key: row.label ?? "total", value: row.value })) ?? [],
+      };
+    });
+  }, [cloud.widgets, cloud.widgetData, cloud.agents]);
   const latestEventId = events.at(-1)?.id ?? null;
   const connected = cloud.agents.length > 0;
 

@@ -25,14 +25,14 @@ export function WidgetBuilderSheet({ open, onClose, onCreate }: WidgetBuilderShe
   const [title, setTitle] = useState("");
   const [field, setField] = useState<AggregatableField>("event_count");
   const [agg, setAgg] = useState<Aggregation>("sum");
-  const [group, setGroup] = useState<GroupField>("port");
+  const [group, setGroup] = useState<GroupField>("agent");
 
   function reset() {
     setType("kpi");
     setTitle("");
     setField("event_count");
     setAgg("sum");
-    setGroup("port");
+    setGroup("agent");
   }
 
   function handleClose() {
