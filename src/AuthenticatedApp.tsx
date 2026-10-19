@@ -5,7 +5,6 @@ import { Overlay } from "./components/Overlay";
 import { DashboardView } from "./components/dashboard/DashboardView";
 import { WidgetBuilderSheet } from "./components/dashboard/WidgetBuilderSheet";
 import { RobotsView } from "./components/robots/RobotsView";
-import { ReportsView } from "./components/reports/ReportsView";
 import { useReports } from "./hooks/useReports";
 import { AiSheet } from "./components/ai/AiSheet";
 import { useCloudData } from "./hooks/useCloudData";
@@ -133,9 +132,8 @@ export function AuthenticatedApp() {
             {cloud.error && <button onClick={() => void cloud.refresh()}>Reintentar</button>}
           </div>
         )}
-        <DashboardView active={view === "dashboard"} widgets={widgets} events={events} onRemoveWidget={(id) => void cloud.deleteWidget(id)} onOpenBuilder={() => setActiveSheet("builder")} reports={reports.reports} idToken={idToken!} businessName={onboarding.me?.businessName ?? ""} onOpenReports={() => setView("reports")} />
+        <DashboardView active={view === "dashboard"} widgets={widgets} events={events} onRemoveWidget={(id) => void cloud.deleteWidget(id)} onOpenBuilder={() => setActiveSheet("builder")} reports={reports.reports} idToken={idToken!} businessName={onboarding.me?.businessName ?? ""} onDeleteReport={reports.remove} />
         <RobotsView active={view === "robots"} events={events} latestEventId={latestEventId} robots={robots} codes={cloud.codes} tickets={cloud.tickets} idToken={idToken!} onUpdateLocation={cloud.updateAgentLocation} onReviewTicket={cloud.reviewTicket} />
-        <ReportsView active={view === "reports"} idToken={idToken!} businessName={onboarding.me?.businessName ?? ""} reports={reports.reports} loaded={reports.loaded} error={reports.error} onError={reports.setError} onRefresh={reports.refresh} onDelete={reports.remove} />
       </main>
       <Overlay open={activeSheet !== null} onClick={() => setActiveSheet(null)} />
       <AiSheet open={activeSheet === "ai"} onOpen={() => setActiveSheet("ai")} onClose={() => setActiveSheet(null)} events={events} onCreateWidget={addWidget} idToken={idToken!} businessName={onboarding.me?.businessName ?? ""} onReportSaved={() => void reports.refresh()} />

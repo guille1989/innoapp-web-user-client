@@ -1,6 +1,6 @@
 import { IconDashboard, IconRobots } from "./icons";
 
-export type AppView = "dashboard" | "robots" | "reports";
+export type AppView = "dashboard" | "robots";
 
 interface BottomNavProps {
   active: AppView;

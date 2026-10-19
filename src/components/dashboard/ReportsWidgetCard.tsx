@@ -6,13 +6,13 @@ interface ReportsWidgetCardProps {
   reports: ApiReportListItem[];
   idToken: string;
   businessName: string;
-  onOpenReports: () => void;
+  onDelete: (reportId: string) => Promise<void>;
   onDragStart: (e: React.PointerEvent) => void;
   onResizeStart: (e: React.PointerEvent) => void;
 }
 
 /** Sin límite fijo de filas: el cuerpo scrollea si la tarjeta es chica (los reportes viven 30 días como mucho). */
-export function ReportsWidgetCard({ reports, idToken, businessName, onOpenReports, onDragStart, onResizeStart }: ReportsWidgetCardProps) {
+export function ReportsWidgetCard({ reports, idToken, businessName, onDelete, onDragStart, onResizeStart }: ReportsWidgetCardProps) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,7 +33,7 @@ export function ReportsWidgetCard({ reports, idToken, businessName, onOpenReport
       <header className="widget-head" onPointerDown={onDragStart}>
         <div className="drag-dots"><i /><i /><i /></div>
         <div className="widget-label"><span className="widget-type-tag bar">Reportes</span><span>Reportes guardados</span></div>
-        <button className="chip" onPointerDown={(e) => e.stopPropagation()} onClick={onOpenReports}>Ver todos ({reports.length})</button>
+        <span className="widget-count">{reports.length}</span>
       </header>
       <div className="widget-body reports-widget-body">
         {error && <div className="reports-error" role="alert">{error}</div>}
@@ -48,6 +48,7 @@ export function ReportsWidgetCard({ reports, idToken, businessName, onOpenReport
               <div className="report-row-actions">
                 <button className="chip" disabled={busy} onClick={() => void run(item, () => openStoredReportPdf(idToken, item, businessName))}>PDF</button>
                 <button className="chip" disabled={busy} onClick={() => void run(item, () => downloadStoredReportCsv(idToken, item))}>CSV</button>
+                <button className="chip" disabled={busy} aria-label={`Borrar ${item.title}`} onClick={() => { if (window.confirm(`¿Borrar el reporte "${item.title}"?`)) void run(item, () => onDelete(item.reportId)); }}>Borrar</button>
               </div>
             </div>
           );

@@ -32,7 +32,6 @@ export function TopBar({ active, onChange, onOpenGuide }: TopBarProps) {
       <nav className="view-switcher glass" aria-label="Secciones principales">
         <button data-tour="view-data" className={active === "dashboard" ? "active" : ""} onClick={() => onChange("dashboard")}>Datos</button>
         <button data-tour="view-agents" className={active === "robots" ? "active" : ""} onClick={() => onChange("robots")}>Agentes</button>
-        <button data-tour="view-reports" className={active === "reports" ? "active" : ""} onClick={() => onChange("reports")}>Reportes</button>
       </nav>
       <div className="user-menu" ref={menuRef} data-tour="user-menu">
         <button className="user-avatar glass" onClick={() => setOpen((value) => !value)} aria-haspopup="menu" aria-expanded={open}>{initials}</button>
