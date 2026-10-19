@@ -10,8 +10,8 @@ const FIELD_LABELS: Record<string, string> = {
   tip: "Propinas",
   tax: "Impuestos",
   unitPrice: "Precio unitario",
-  quantity: "Unidades",
-  event_count: "Tickets",
+  quantity: "Unidades vendidas",
+  event_count: "Tickets (transacciones)",
 };
 const AGG_LABELS: Record<string, string> = { sum: "Suma", avg: "Promedio", max: "Máximo", min: "Mínimo", count: "Cantidad" };
 
@@ -29,6 +29,8 @@ function fmtCompact(v: number, field: string): string {
 }
 
 function metricLabel(s: ApiReportSection): string {
+  // event_count ya es un conteo de tickets: "Cantidad · Tickets" sería redundante.
+  if (s.field === "event_count") return FIELD_LABELS.event_count;
   return `${AGG_LABELS[s.aggregation] ?? s.aggregation} · ${FIELD_LABELS[s.field] ?? s.field}`;
 }
 
@@ -140,7 +142,7 @@ export function reportToHtml(report: ApiReport, summary: string, businessName: s
   const charts = report.sections.filter((s) => s.kind !== "kpi");
   const date = new Date(report.generatedAt).toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" });
   const chartsHtml = charts
-    .map((s) => `<section class="block"><h2>${esc(s.heading)}</h2>${s.kind === "trend" ? trendChart(s) : rankingChart(s)}</section>`)
+    .map((s) => `<section class="block"><h2>${esc(s.heading)}</h2><div class="note metric">Métrica: ${esc(metricLabel(s))}</div>${s.kind === "trend" ? trendChart(s) : rankingChart(s)}</section>`)
     .join("");
   const annex = charts.filter((s) => s.data.length > 0);
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${esc(report.title)}</title><style>
