@@ -91,7 +91,8 @@ export function AiSheet({ open, onOpen, onClose, events, onCreateWidget, idToken
   async function send(question: string) {
     const value = question.trim();
     if (!value || typing) return;
-    const isLocal = respondLocally(value, events) !== null;
+    const previousQuestion = [...history].reverse().find((t) => t.role === "user")?.text;
+    const isLocal = respondLocally(value, events, previousQuestion) !== null;
     if (!isLocal && blocked) return;
     setMessages((prev) => [...prev, { id: msgSeq++, role: "user", content: value }]);
     setInput("");
@@ -102,7 +103,7 @@ export function AiSheet({ open, onOpen, onClose, events, onCreateWidget, idToken
     // Primero los patrones locales (crear widgets, "¿qué robot vendió más?")
     // — gratis e instantáneos, sin red. Lo que no reconocen se lo mandamos
     // al asistente real (Bedrock + datos del negocio), no a un texto fijo.
-    const local = respondLocally(value, events);
+    const local = respondLocally(value, events, previousQuestion);
     if (local) {
       window.setTimeout(() => {
         const content = local.kind === "widget" ? <><span>Listo, añadí </span><span className="mono-inline">{local.cfg.title}</span><span> a tu dashboard.</span></> : local.text;
