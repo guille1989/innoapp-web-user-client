@@ -185,8 +185,9 @@ ${annex.length ? `<section class="annex"><h2>Anexo: datos detallados</h2>${annex
 }
 
 /** Abre el reporte en otra pestaña listo para imprimir / "Guardar como PDF". */
-export function printReport(report: ApiReport, summary: string, businessName: string) {
-  const w = window.open("", "_blank");
+/** `target`: ventana ya abierta por el click (los navegadores bloquean window.open después de un await). */
+export function printReport(report: ApiReport, summary: string, businessName: string, target?: Window | null) {
+  const w = target ?? window.open("", "_blank");
   if (!w) return;
   w.document.write(reportToHtml(report, summary, businessName));
   w.document.close();

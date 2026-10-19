@@ -51,7 +51,9 @@ export interface ApiReportSection {
   previous?: number;
 }
 export interface ApiReport { title: string; generatedAt: string; sections: ApiReportSection[] }
-export interface ApiAssistantAnswer { answer: string; report?: ApiReport }
+export interface ApiAssistantAnswer { answer: string; report?: ApiReport; reportId?: string }
+export interface ApiReportListItem { reportId: string; title: string; createdAt: string; expiresAt: string }
+export interface ApiStoredReport { reportId: string; summary: string; report: ApiReport; createdAt: string; expiresAt: string }
 export interface ApiAssistantHistoryTurn { role: "user" | "assistant"; text: string }
 export interface ApiOnboardingState {
   version: 1;
@@ -143,6 +145,9 @@ export const api = {
   createWidget: (token: string, body: Omit<ApiWidget, "widgetId" | "createdAt">) =>
     request<ApiWidget>(token, "/widgets", { method: "POST", body: JSON.stringify(body) }),
   deleteWidget: (token: string, id: string) => request<void>(token, `/widgets/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  reports: (token: string) => request<{ reports: ApiReportListItem[] }>(token, "/reports"),
+  report: (token: string, reportId: string) => request<ApiStoredReport>(token, `/reports/${encodeURIComponent(reportId)}`),
+  deleteReport: (token: string, reportId: string) => request<void>(token, `/reports/${encodeURIComponent(reportId)}`, { method: "DELETE" }),
   assistantAsk: (token: string, question: string, history: ApiAssistantHistoryTurn[] = []) =>
     request<ApiAssistantAnswer>(token, "/assistant/ask", { method: "POST", body: JSON.stringify({ question, history }) }),
 };

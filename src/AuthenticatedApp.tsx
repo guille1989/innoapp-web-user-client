@@ -5,6 +5,7 @@ import { Overlay } from "./components/Overlay";
 import { DashboardView } from "./components/dashboard/DashboardView";
 import { WidgetBuilderSheet } from "./components/dashboard/WidgetBuilderSheet";
 import { RobotsView } from "./components/robots/RobotsView";
+import { ReportsView } from "./components/reports/ReportsView";
 import { AiSheet } from "./components/ai/AiSheet";
 import { useCloudData } from "./hooks/useCloudData";
 import { useOnboarding } from "./hooks/useOnboarding";
@@ -132,6 +133,7 @@ export function AuthenticatedApp() {
         )}
         <DashboardView active={view === "dashboard"} widgets={widgets} events={events} onRemoveWidget={(id) => void cloud.deleteWidget(id)} onOpenBuilder={() => setActiveSheet("builder")} />
         <RobotsView active={view === "robots"} events={events} latestEventId={latestEventId} robots={robots} codes={cloud.codes} tickets={cloud.tickets} idToken={idToken!} onUpdateLocation={cloud.updateAgentLocation} onReviewTicket={cloud.reviewTicket} />
+        <ReportsView active={view === "reports"} idToken={idToken!} businessName={onboarding.me?.businessName ?? ""} />
       </main>
       <Overlay open={activeSheet !== null} onClick={() => setActiveSheet(null)} />
       <AiSheet open={activeSheet === "ai"} onOpen={() => setActiveSheet("ai")} onClose={() => setActiveSheet(null)} events={events} onCreateWidget={addWidget} idToken={idToken!} businessName={onboarding.me?.businessName ?? ""} />

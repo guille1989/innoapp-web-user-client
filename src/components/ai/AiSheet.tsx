@@ -36,7 +36,7 @@ const SUGGESTED = [
 
 let msgSeq = 1;
 
-function ReportMessage({ answer, report, businessName }: { answer: string; report: ApiReport; businessName: string }) {
+function ReportMessage({ answer, report, businessName, saved }: { answer: string; report: ApiReport; businessName: string; saved: boolean }) {
   return (
     <>
       <div>{answer}</div>
@@ -44,6 +44,7 @@ function ReportMessage({ answer, report, businessName }: { answer: string; repor
         <button className="chip" onClick={() => printReport(report, answer, businessName)}>Ver / guardar PDF</button>
         <button className="chip" onClick={() => downloadReportCsv(report)}>Descargar CSV</button>
       </div>
+      {saved && <div style={{ fontSize: 11, opacity: 0.7, marginTop: 6 }}>Guardado en la sección Reportes por 30 días.</div>}
     </>
   );
 }
@@ -113,9 +114,9 @@ export function AiSheet({ open, onOpen, onClose, events, onCreateWidget, idToken
     setNow(Date.now());
     setUsage((u) => (u.minute === currentMinute() ? { minute: u.minute, count: u.count + 1 } : { minute: currentMinute(), count: 1 }));
     try {
-      const { answer, report } = await api.assistantAsk(idToken, value, history);
+      const { answer, report, reportId } = await api.assistantAsk(idToken, value, history);
       setTyping(false);
-      pushAiMessage(report ? <ReportMessage answer={answer} report={report} businessName={businessName} /> : answer);
+      pushAiMessage(report ? <ReportMessage answer={answer} report={report} businessName={businessName} saved={Boolean(reportId)} /> : answer);
       const newTurns: ApiAssistantHistoryTurn[] = [
         { role: "user", text: value },
         { role: "assistant", text: answer },
