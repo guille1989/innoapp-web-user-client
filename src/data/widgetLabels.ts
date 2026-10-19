@@ -25,6 +25,7 @@ export const GROUP_LABELS: Record<GroupField, string> = {
   parsedBy: "Método de parseo",
   description: "Producto",
   day: "Día",
+  hour: "Hora",
 };
 
 /**

@@ -23,8 +23,20 @@ export function dataFloorKey(): string {
   return `${new Date().getUTCFullYear() - 1}-01-01`;
 }
 
+/**
+ * Fecha LOCAL del navegador (`en-CA` da YYYY-MM-DD), `offsetDays` hacia atrás o adelante.
+ * El backend agrupa por día/hora en la zona del navegador (`?tz=`), así que "hoy"
+ * tiene que ser el de esa misma zona — con UTC, después de las 19:00 en Colombia
+ * "hoy" ya sería mañana.
+ */
+export function localDateKey(offsetDays = 0): string {
+  const date = new Date();
+  date.setDate(date.getDate() + offsetDays);
+  return new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
+}
+
 export function todayKey(): string {
-  return new Date().toISOString().slice(0, 10);
+  return localDateKey();
 }
 
 function toDate(key: string): Date {

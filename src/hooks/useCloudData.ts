@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { localDateKey } from "../lib/chartScale";
 import { api, type AgentLocation, type ApiActivationCode, type ApiAgent, type ApiTicket, type ApiWidget, type ApiWidgetData } from "../api/client";
 
 // Cada tick re-ejecuta una query de Athena por widget en el dashboard —
@@ -7,6 +8,10 @@ import { api, type AgentLocation, type ApiActivationCode, type ApiAgent, type Ap
 // a principios de agosto). 30s en vez de 15s, y el efecto abajo lo pausa
 // del todo mientras la pestaña no está visible.
 const POLL_MS = 30_000;
+
+// Un widget por hora solo muestra hoy y ayer: pedir todo el histórico traería
+// miles de buckets (y el backend corta en 800, los MÁS VIEJOS).
+const HOURLY_RANGE = () => ({ dateFrom: localDateKey(-1), dateTo: localDateKey() });
 
 function mergeAgentsKeepingNewest(current: ApiAgent[], incoming: ApiAgent[]): ApiAgent[] {
   const currentById = new Map(current.map((agent) => [agent.agentId, agent]));
@@ -46,7 +51,7 @@ export function useCloudData(idToken: string) {
       const [ticketResult, agentResult, codeResult, widgetResult] = await Promise.all([
         api.tickets(idToken), api.agents(idToken), api.activationCodes(idToken), api.widgets(idToken),
       ]);
-      const dataResults = await Promise.allSettled(widgetResult.widgets.map(async (w) => [w.widgetId, (await api.widgetData(idToken, w.widgetId)).data] as const));
+      const dataResults = await Promise.allSettled(widgetResult.widgets.map(async (w) => [w.widgetId, (await api.widgetData(idToken, w.widgetId, w.groupBy === "hour" ? HOURLY_RANGE() : undefined)).data] as const));
       const dataEntries = dataResults.flatMap((result) => result.status === "fulfilled" ? [result.value] : []);
       setTickets(ticketResult.tickets);
       setAgents((current) => mergeAgentsKeepingNewest(current, agentResult.agents));

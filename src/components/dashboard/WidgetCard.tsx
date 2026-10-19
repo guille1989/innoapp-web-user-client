@@ -3,6 +3,7 @@ import { AGG_LABELS } from "../../data/widgetLabels";
 import { IconTrash } from "../icons";
 import { BarChart } from "./charts/BarChart";
 import { DonutChart } from "./charts/DonutChart";
+import { HourlyChart } from "./charts/HourlyChart";
 import { LineChart } from "./charts/LineChart";
 import type { BusinessEvent, Widget } from "../../types";
 
@@ -27,7 +28,7 @@ export function WidgetCard({ widget: w, events, onRemove, onDragStart, onResizeS
       <div className="widget-body">
         {w.type === "kpi" && <KpiBody widget={w} events={events} />}
         {w.type === "bar" && <BarChart widget={w} />}
-        {w.type === "line" && <LineChart widget={w} />}
+        {w.type === "line" && (w.group === "hour" ? <HourlyChart widget={w} /> : <LineChart widget={w} />)}
         {w.type === "donut" && <DonutChart widget={w} />}
       </div>
       <button className="resize-handle" onPointerDown={onResizeStart} aria-label={`Redimensionar ${w.title}`}><span>⌟</span></button>

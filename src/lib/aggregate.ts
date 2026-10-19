@@ -20,6 +20,12 @@ const GROUP_KEY: Record<GroupField, (e: BusinessEvent) => string> = {
   parsedBy: () => "Sin dato",
   description: () => "Sin dato",
   day: (e) => new Date(e.ts).toISOString().slice(0, 10),
+  // Hora local, igual que las claves "YYYY-MM-DD HH" que arma el backend con ?tz=.
+  hour: (e) => {
+    const d = new Date(e.ts);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}`;
+  },
 };
 
 function fieldValue(e: BusinessEvent, field: AggregatableField): number | undefined {
@@ -70,8 +76,8 @@ export function aggregateByGroup(
     key,
     value: field === "event_count" ? vals.length : reduce(vals, agg),
   }));
-  rows.sort(group === "day" ? (a, b) => a.key.localeCompare(b.key) : (a, b) => b.value - a.value);
-  return group === "day" ? rows : rows.slice(0, 6);
+  rows.sort(group === "day" || group === "hour" ? (a, b) => a.key.localeCompare(b.key) : (a, b) => b.value - a.value);
+  return group === "day" || group === "hour" ? rows : rows.slice(0, 6);
 }
 
 export function topGroup(

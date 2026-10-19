@@ -26,6 +26,7 @@ export function WidgetBuilderSheet({ open, onClose, onCreate }: WidgetBuilderShe
   const [field, setField] = useState<AggregatableField>("event_count");
   const [agg, setAgg] = useState<Aggregation>("sum");
   const [group, setGroup] = useState<GroupField>("agent");
+  const [timeAxis, setTimeAxis] = useState<"day" | "hour">("day");
 
   function reset() {
     setType("kpi");
@@ -33,6 +34,7 @@ export function WidgetBuilderSheet({ open, onClose, onCreate }: WidgetBuilderShe
     setField("event_count");
     setAgg("sum");
     setGroup("agent");
+    setTimeAxis("day");
   }
 
   function handleClose() {
@@ -41,7 +43,7 @@ export function WidgetBuilderSheet({ open, onClose, onCreate }: WidgetBuilderShe
   }
 
   function handleCreate() {
-    const groupVal = type === "kpi" ? null : type === "line" ? "day" : group;
+    const groupVal = type === "kpi" ? null : type === "line" ? timeAxis : group;
     const autoTitle =
       FIELD_LABELS[field] +
       (agg && field !== "event_count" ? ` (${AGG_LABELS[agg].toLowerCase()})` : "") +
@@ -122,7 +124,22 @@ export function WidgetBuilderSheet({ open, onClose, onCreate }: WidgetBuilderShe
           </div>
         )}
 
-        {type === "line" && <div className="temporal-hint"><span>Eje X</span><strong>Fecha de venta</strong><small>Dentro del widget podrás elegir el rango de fechas y agrupar por día, semana o mes.</small></div>}
+        {type === "line" && (
+          <div className="field">
+            <label className="field-label">Eje X</label>
+            <div className="chart-segmented" role="group" aria-label="Eje X temporal">
+              <button type="button" className={timeAxis === "day" ? "active" : ""} aria-pressed={timeAxis === "day"} onClick={() => setTimeAxis("day")}>Por día</button>
+              <button type="button" className={timeAxis === "hour" ? "active" : ""} aria-pressed={timeAxis === "hour"} onClick={() => setTimeAxis("hour")}>Por hora</button>
+            </div>
+            <div className="temporal-hint" style={{ marginTop: 8, gridTemplateColumns: "1fr" }}>
+              <small>
+                {timeAxis === "day"
+                  ? "Dentro del widget podrás elegir el rango de fechas y agrupar por día, semana o mes."
+                  : "Muestra hoy y ayer hora por hora, en la zona horaria de tu navegador."}
+              </small>
+            </div>
+          </div>
+        )}
 
         {type !== "kpi" && type !== "line" && (
           <div className="field">

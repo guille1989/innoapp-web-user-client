@@ -107,6 +107,15 @@ async function requestPublic<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
+/** Zona IANA del navegador ("America/Bogota"): el backend agrupa por día/hora local con ella. */
+function browserTimeZone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  } catch {
+    return "UTC";
+  }
+}
+
 export const api = {
   signup: (businessName: string, email: string, password: string) =>
     requestPublic<{ tenantId: string }>("/signup", { method: "POST", body: JSON.stringify({ businessName, email, password }) }),
@@ -143,7 +152,10 @@ export const api = {
   widgets: (token: string) => request<{ widgets: ApiWidget[] }>(token, "/widgets"),
   /** `range` filtra por fechas en el backend (dateTo inclusivo); sin él devuelve todo el histórico. */
   widgetData: (token: string, id: string, range?: { dateFrom: string; dateTo: string }) =>
-    request<{ data: ApiWidgetData }>(token, `/widgets/${encodeURIComponent(id)}/data${range ? `?dateFrom=${range.dateFrom}&dateTo=${range.dateTo}` : ""}`),
+    request<{ data: ApiWidgetData }>(
+      token,
+      `/widgets/${encodeURIComponent(id)}/data?${range ? `dateFrom=${range.dateFrom}&dateTo=${range.dateTo}&` : ""}tz=${encodeURIComponent(browserTimeZone())}`,
+    ),
   createWidget: (token: string, body: Omit<ApiWidget, "widgetId" | "createdAt">) =>
     request<ApiWidget>(token, "/widgets", { method: "POST", body: JSON.stringify(body) }),
   deleteWidget: (token: string, id: string) => request<void>(token, `/widgets/${encodeURIComponent(id)}`, { method: "DELETE" }),
@@ -151,5 +163,5 @@ export const api = {
   report: (token: string, reportId: string) => request<ApiStoredReport>(token, `/reports/${encodeURIComponent(reportId)}`),
   deleteReport: (token: string, reportId: string) => request<void>(token, `/reports/${encodeURIComponent(reportId)}`, { method: "DELETE" }),
   assistantAsk: (token: string, question: string, history: ApiAssistantHistoryTurn[] = []) =>
-    request<ApiAssistantAnswer>(token, "/assistant/ask", { method: "POST", body: JSON.stringify({ question, history }) }),
+    request<ApiAssistantAnswer>(token, "/assistant/ask", { method: "POST", body: JSON.stringify({ question, history, timeZone: browserTimeZone() }) }),
 };
