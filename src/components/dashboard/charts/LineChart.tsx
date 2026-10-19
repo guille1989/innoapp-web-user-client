@@ -3,26 +3,25 @@ import { formatWidgetValue } from "../../../lib/aggregate";
 import {
   DAY_KEY,
   buildTimeSeries,
-  dataFloorKey,
   fmtAxis,
   metricLabel,
   fullPeriodLabel,
   niceTicks,
   periodEndKey,
   pickTickIndices,
+  RANGE_LABELS,
   resolveRange,
   shortRangeLabel,
   tickLabel,
-  todayKey,
   type RangePreset,
   type TimeGranularity,
 } from "../../../lib/chartScale";
 import { ChartTooltip } from "./ChartTooltip";
+import { RangePanel, RangePicker } from "./RangeControls";
 import { useElementSize } from "./useElementSize";
 import type { Widget } from "../../../types";
 
 const GRANULARITY_LABELS: Record<TimeGranularity, string> = { day: "Día", week: "Semana", month: "Mes" };
-const RANGE_LABELS: Record<RangePreset, string> = { "7d": "7 días", "30d": "30 días", "90d": "90 días", all: "Todo", custom: "Personalizado" };
 
 interface LineView {
   range: RangePreset;
@@ -88,19 +87,7 @@ export function LineChart({ widget: w }: { widget: Widget }) {
 
   const controls = (
     <div className="chart-controls">
-      <div className="chart-range">
-        {/* Con rango personalizado, la opción muestra las fechas elegidas: no hace falta otro rótulo al lado (en un widget de 320px no entra). */}
-        <select className="chart-select" value={view.range} onChange={(e) => changeRange(e.target.value as RangePreset)} aria-label="Rango de fechas">
-          {(Object.keys(RANGE_LABELS) as RangePreset[]).map((preset) => (
-            <option key={preset} value={preset}>{preset === "custom" && view.range === "custom" ? shortRangeLabel(range.from, range.to) : RANGE_LABELS[preset]}</option>
-          ))}
-        </select>
-        {view.range === "custom" && (
-          <button type="button" className="chart-range-edit" onClick={() => setEditingRange((open) => !open)} aria-expanded={editingRange} aria-label="Editar rango personalizado" title="Editar rango">
-            <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><rect x="1.5" y="2.5" width="9" height="8" rx="1.5" /><path d="M1.5 5h9M4 1.2v2.4M8 1.2v2.4" /></svg>
-          </button>
-        )}
-      </div>
+      <RangePicker view={view} resolved={range} editing={editingRange} onChange={changeRange} onToggleEdit={() => setEditingRange((open) => !open)} />
       <div className="chart-segmented" role="group" aria-label="Agrupación temporal">
         {(Object.keys(GRANULARITY_LABELS) as TimeGranularity[]).map((item) => (
           <button key={item} type="button" className={view.granularity === item ? "active" : ""} aria-pressed={view.granularity === item} onClick={() => { setView((current) => ({ ...current, granularity: item })); setActive(null); }}>
@@ -112,17 +99,7 @@ export function LineChart({ widget: w }: { widget: Widget }) {
   );
 
   const rangePanel = editingRange && view.range === "custom" && (
-    <div className="chart-range-panel" role="dialog" aria-label="Rango personalizado" onKeyDown={(e) => { if (e.key === "Escape") setEditingRange(false); }}>
-      <label>
-        <span>Desde</span>
-        <input type="date" value={range.from} min={dataFloorKey()} max={range.to} onChange={(e) => { const value = e.target.value; if (value) setView((current) => ({ ...current, from: value })); }} />
-      </label>
-      <label>
-        <span>Hasta</span>
-        <input type="date" value={range.to} min={range.from} max={todayKey()} onChange={(e) => { const value = e.target.value; if (value) setView((current) => ({ ...current, to: value })); }} />
-      </label>
-      <button type="button" className="chart-range-done" onClick={() => setEditingRange(false)}>Listo</button>
-    </div>
+    <RangePanel resolved={range} onFrom={(value) => setView((current) => ({ ...current, from: value }))} onTo={(value) => setView((current) => ({ ...current, to: value }))} onDone={() => setEditingRange(false)} />
   );
 
   if (!hasDataInRange) {

@@ -141,7 +141,9 @@ export const api = {
     }),
   activationCodes: (token: string) => request<{ codes: ApiActivationCode[] }>(token, "/activation-codes"),
   widgets: (token: string) => request<{ widgets: ApiWidget[] }>(token, "/widgets"),
-  widgetData: (token: string, id: string) => request<{ data: ApiWidgetData }>(token, `/widgets/${encodeURIComponent(id)}/data`),
+  /** `range` filtra por fechas en el backend (dateTo inclusivo); sin él devuelve todo el histórico. */
+  widgetData: (token: string, id: string, range?: { dateFrom: string; dateTo: string }) =>
+    request<{ data: ApiWidgetData }>(token, `/widgets/${encodeURIComponent(id)}/data${range ? `?dateFrom=${range.dateFrom}&dateTo=${range.dateTo}` : ""}`),
   createWidget: (token: string, body: Omit<ApiWidget, "widgetId" | "createdAt">) =>
     request<ApiWidget>(token, "/widgets", { method: "POST", body: JSON.stringify(body) }),
   deleteWidget: (token: string, id: string) => request<void>(token, `/widgets/${encodeURIComponent(id)}`, { method: "DELETE" }),

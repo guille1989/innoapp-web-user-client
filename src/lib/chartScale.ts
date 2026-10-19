@@ -57,6 +57,8 @@ export function periodEndKey(key: string, granularity: TimeGranularity): string 
   return addDays(nextPeriodKey(key, granularity), -1);
 }
 
+export const RANGE_LABELS: Record<RangePreset, string> = { "7d": "7 días", "30d": "30 días", "90d": "90 días", all: "Todo", custom: "Personalizado" };
+
 const PRESET_DAYS:Record<Exclude<RangePreset, "all" | "custom">, number> = { "7d": 7, "30d": 30, "90d": 90 };
 
 export function resolveRange(
