@@ -70,9 +70,17 @@ export interface ApiMe {
 }
 export type OnboardingAction = "start" | "defer" | "complete" | "complete-product-tour" | "create-starter-dashboard";
 
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
 async function readErrorBody(response: Response): Promise<never> {
   const body = (await response.json().catch(() => ({}))) as { error?: string };
-  throw new Error(body.error ?? `La API respondió HTTP ${response.status}`);
+  throw new ApiError(body.error ?? `La API respondió HTTP ${response.status}`, response.status);
 }
 
 async function request<T>(idToken: string, path: string, init?: RequestInit): Promise<T> {

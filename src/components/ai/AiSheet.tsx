@@ -1,5 +1,5 @@
-import { useRef, useState } from "react";
-import { api, type ApiAssistantHistoryTurn, type ApiReport } from "../../api/client";
+import { useEffect, useRef, useState } from "react";
+import { api, ApiError, type ApiAssistantHistoryTurn, type ApiReport } from "../../api/client";
 import { downloadReportCsv, printReport } from "../../lib/report";
 import { respondLocally } from "../../lib/aiAssistant";
 import { IconAi, IconClose, IconSend } from "../icons";
@@ -7,6 +7,10 @@ import type { BusinessEvent, Widget } from "../../types";
 
 // Debe coincidir con MAX_HISTORY_TURNS en ticket-parsing-cloud/src/assistant/askHandler.ts.
 const MAX_HISTORY_TURNS = 6;
+// Debe coincidir con MINUTE_LIMIT en ticket-parsing-cloud/src/assistant/rateLimit.ts.
+// El backend cuenta por minuto de reloj (bloques de 60 s), así que acá se usa el mismo bloque.
+const MINUTE_LIMIT = 10;
+const currentMinute = () => Math.floor(Date.now() / 60_000);
 
 interface AiSheetProps {
   open: boolean;
@@ -54,6 +58,21 @@ export function AiSheet({ open, onOpen, onClose, events, onCreateWidget, idToken
   // conversación con el modelo, así que no se agregan acá.
   const [history, setHistory] = useState<ApiAssistantHistoryTurn[]>([]);
   const bodyRef = useRef<HTMLDivElement>(null);
+  // Medidor de uso del asistente: preguntas enviadas al backend en el minuto actual.
+  const [usage, setUsage] = useState({ minute: currentMinute(), count: 0 });
+  const [dayBlocked, setDayBlocked] = useState(false);
+  const [now, setNow] = useState(Date.now());
+  const usedNow = usage.minute === currentMinute() ? usage.count : 0;
+  const remaining = Math.max(0, MINUTE_LIMIT - usedNow);
+  const waitSeconds = remaining === 0 ? Math.max(1, Math.ceil(((currentMinute() + 1) * 60_000 - now) / 1000)) : 0;
+  const blocked = dayBlocked || remaining === 0;
+
+  // Tick de 1 s solo mientras hay algo que mostrar/contar (consumo del minuto o bloqueo).
+  useEffect(() => {
+    if (usedNow === 0) return;
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [usedNow]);
 
   function scrollToBottom() {
     requestAnimationFrame(() => {
@@ -69,6 +88,8 @@ export function AiSheet({ open, onOpen, onClose, events, onCreateWidget, idToken
   async function send(question: string) {
     const value = question.trim();
     if (!value || typing) return;
+    const isLocal = respondLocally(value, events) !== null;
+    if (!isLocal && blocked) return;
     setMessages((prev) => [...prev, { id: msgSeq++, role: "user", content: value }]);
     setInput("");
     setDockInput("");
@@ -89,6 +110,8 @@ export function AiSheet({ open, onOpen, onClose, events, onCreateWidget, idToken
       return;
     }
 
+    setNow(Date.now());
+    setUsage((u) => (u.minute === currentMinute() ? { minute: u.minute, count: u.count + 1 } : { minute: currentMinute(), count: 1 }));
     try {
       const { answer, report } = await api.assistantAsk(idToken, value, history);
       setTyping(false);
@@ -98,9 +121,16 @@ export function AiSheet({ open, onOpen, onClose, events, onCreateWidget, idToken
         { role: "assistant", text: answer },
       ];
       setHistory((prev) => [...prev, ...newTurns].slice(-MAX_HISTORY_TURNS));
-    } catch {
+    } catch (err) {
       setTyping(false);
-      pushAiMessage("No pude conectarme con el asistente, probá de nuevo en un momento.");
+      if (err instanceof ApiError && err.status === 429) {
+        // Sincroniza con el servidor: si dice que no hay más, el medidor queda en 0 hasta el próximo minuto.
+        if (/hoy|mañana/.test(err.message)) setDayBlocked(true);
+        else setUsage({ minute: currentMinute(), count: MINUTE_LIMIT });
+      }
+      // TypeError = fetch falló antes de recibir respuesta (red); cualquier otro Error trae el mensaje de la API (ej. rate limit 429).
+      const apiMessage = err instanceof Error && !(err instanceof TypeError) ? err.message : null;
+      pushAiMessage(apiMessage ?? "No pude conectarme con el asistente, probá de nuevo en un momento.");
     }
   }
 
@@ -130,8 +160,15 @@ export function AiSheet({ open, onOpen, onClose, events, onCreateWidget, idToken
           {typing && <div className="msg ai"><div className="msg-avatar">IA</div><div className="msg-bubble"><div className="typing"><span /><span /><span /></div></div></div>}
         </div>
         <div className="suggested">{SUGGESTED.map((item) => <button className="chip" key={item.q} onClick={() => void send(item.q)}>{item.label}</button>)}</div>
+        <div className="ai-usage" role="status" style={{ fontSize: 12, padding: "0 16px 6px", opacity: 0.75 }}>
+          {dayBlocked
+            ? "Llegaste al límite diario del asistente. Podés volver a preguntar mañana."
+            : remaining === 0
+              ? `Límite alcanzado: podés volver a preguntar en ${waitSeconds} s.`
+              : usedNow > 0 && `Preguntas disponibles este minuto: ${remaining} de ${MINUTE_LIMIT}`}
+        </div>
         <div className="ai-input-wrap">
-          <textarea className="ai-input" rows={1} placeholder="Pregunta o pide un KPI…" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(input); } }} />
+          <textarea className="ai-input" rows={1} placeholder={blocked ? "Esperá un momento para volver a preguntar…" : "Pregunta o pide un KPI…"} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(input); } }} />
           <button className="ai-send" onClick={() => void send(input)} aria-label="Enviar"><IconSend /></button>
         </div>
       </section>
