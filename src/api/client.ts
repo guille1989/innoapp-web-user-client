@@ -12,6 +12,9 @@ export interface ApiTicket {
   tip?: number;
   failReason?: string;
   parsedBy?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  reviewDecision?: "confirmed" | "discarded";
 }
 
 export interface ApiAgent {
