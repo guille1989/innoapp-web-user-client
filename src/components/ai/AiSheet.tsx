@@ -3,6 +3,8 @@ import { api, ApiError, type ApiAssistantHistoryTurn, type ApiReport } from "../
 import { downloadReportCsv, printReport } from "../../lib/report";
 import { respondLocally } from "../../lib/aiAssistant";
 import { IconAi, IconClose, IconSend } from "../icons";
+import { TextSizeControl } from "../dashboard/TextSizeControl";
+import { useFontLevel } from "../dashboard/fontScale";
 import type { BusinessEvent, Widget } from "../../types";
 
 // Debe coincidir con MAX_HISTORY_TURNS en ticket-parsing-cloud/src/assistant/askHandler.ts.
@@ -56,13 +58,14 @@ function ReportMessage({ answer, report, businessName, saved }: { answer: string
         <button className="chip" onClick={() => printReport(report, answer, businessName)}>Ver / guardar PDF</button>
         <button className="chip" onClick={() => downloadReportCsv(report)}>Descargar CSV</button>
       </div>
-      {saved && <div style={{ fontSize: 11, opacity: 0.7, marginTop: 6 }}>Guardado en la sección Reportes por 30 días.</div>}
+      {saved && <div style={{ fontSize: "calc(11px * var(--afs, 1))", opacity: 0.7, marginTop: 6 }}>Guardado en la sección Reportes por 30 días.</div>}
     </>
   );
 }
 
 export function AiSheet({ open, onOpen, onClose, events, onCreateWidget, idToken, businessName, onReportSaved }: AiSheetProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([{ id: msgSeq++, role: "ai", content: "Hola, soy tu asistente de datos. Puedo analizar las lecturas de tus agentes y crear widgets por ti." }]);
+  const [fontLevel, setFontLevel] = useFontLevel();
   const [input, setInput] = useState("");
   const [dockInput, setDockInput] = useState("");
   const [typing, setTyping] = useState(false);
@@ -168,6 +171,7 @@ export function AiSheet({ open, onOpen, onClose, events, onCreateWidget, idToken
         <div className="sheet-handle" />
         <header className="ai-head">
           <div className="ai-head-title"><div className="ai-avatar"><IconAi /></div><div><div className="ai-title-text">Asistente de datos</div><div className="ai-subtitle"><span className="pulse-dot" /> Datos sincronizados en tiempo real</div></div></div>
+          <TextSizeControl className="inline" level={fontLevel} onChange={setFontLevel} label="Tamaño del texto del asistente" />
           <button className="ai-close" onClick={onClose} aria-label="Cerrar asistente"><IconClose /></button>
         </header>
         <div className="ai-body" ref={bodyRef}>
@@ -175,7 +179,7 @@ export function AiSheet({ open, onOpen, onClose, events, onCreateWidget, idToken
           {typing && <div className="msg ai"><div className="msg-avatar">IA</div><div className="msg-bubble"><div className="typing"><span /><span /><span /></div></div></div>}
         </div>
         <div className="suggested">{SUGGESTED.map((item) => <button className="chip" key={item.q} onClick={() => void send(item.q)}>{item.label}</button>)}</div>
-        <div className="ai-usage" role="status" style={{ fontSize: 12, padding: "0 16px 6px", opacity: 0.75 }}>
+        <div className="ai-usage" role="status" style={{ fontSize: "calc(12px * var(--afs, 1))", padding: "0 16px 6px", opacity: 0.75 }}>
           {dayBlocked
             ? "Llegaste al límite diario del asistente. Podés volver a preguntar mañana."
             : remaining === 0

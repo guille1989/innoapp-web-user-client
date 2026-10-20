@@ -175,3 +175,16 @@ button { border: 0; background: none; cursor: pointer; }
 .text-size { position: fixed; z-index: 50; top: 74px; right: 24px; height: 34px; padding: 0 6px 0 11px; display: flex; align-items: center; gap: 4px; border-radius: 10px; }.text-size>span { margin-right: 4px; color: var(--dim); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; }.text-size button { width: 28px; height: 24px; display: grid; place-items: center; border-radius: 6px; color: var(--muted); font-weight: 700; line-height: 1; }.text-size button:hover { color: var(--text); }.text-size button.active { background: var(--teal-dim); color: var(--teal); box-shadow: inset 0 0 0 1px rgba(140,244,238,.18); }.text-size button:focus-visible { outline: 1px solid var(--teal); }
 /* iOS Safari hace zoom al enfocar un campo con font-size < 16px: en pantallas táctiles los campos del asistente usan 16px. */
 @media (pointer: coarse) { .ai-dock input, .ai-input { font-size: 16px; } .ai-dock input { line-height: 1.3; } }
+
+/* Tamaño del texto del asistente IA (--afs la publica fontScale.ts en <html>; 1 = tamaño original). */
+.text-size.inline { position: static; margin-left: auto; margin-right: 10px; }
+.ai-dock input { font-size: calc(11px * var(--afs, 1)); }
+.ai-title-text { font-size: calc(11px * var(--afs, 1)); }
+.ai-subtitle { font-size: calc(8px * var(--afs, 1)); }
+.ai-sheet .msg-avatar { font-size: calc(7px * var(--afs, 1)); }
+.ai-sheet .msg-bubble { font-size: calc(10px * var(--afs, 1)); }
+.ai-sheet .chip { font-size: calc(8px * var(--afs, 1)); }
+.ai-input { font-size: calc(10px * var(--afs, 1)); }
+@media (max-width: 760px) { .ai-dock input { font-size: calc(10px * var(--afs, 1)); } }
+/* iOS hace zoom al enfocar un campo con font-size < 16px: el mínimo se mantiene. */
+@media (pointer: coarse) { .ai-dock input, .ai-input { font-size: max(16px, calc(10px * var(--afs, 1))); } }

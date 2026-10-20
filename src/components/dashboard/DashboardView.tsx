@@ -3,7 +3,8 @@ import { WidgetCard } from "./WidgetCard";
 import { ReportsWidgetCard } from "./ReportsWidgetCard";
 import type { ApiReportListItem } from "../../api/client";
 import { IconPlus } from "../icons";
-import { FONT_LEVELS, FONT_LEVEL_LABELS, FONT_SCALES, loadFontLevel, saveFontLevel, WidgetFontScaleProvider, type FontSizeLevel } from "./fontScale";
+import { TextSizeControl } from "./TextSizeControl";
+import { FONT_SCALES, useFontLevel, WidgetFontScaleProvider } from "./fontScale";
 import type { BusinessEvent, Widget } from "../../types";
 
 interface DashboardViewProps {
@@ -38,7 +39,7 @@ function defaultLayout(index: number, type: Widget["type"]): WidgetLayout {
 export function DashboardView({ active, widgets, events, onRemoveWidget, onOpenBuilder, reports, idToken, businessName, onDeleteReport }: DashboardViewProps) {
   const [layout, setLayout] = useState<LayoutMap>(loadLayout);
   const [selected, setSelected] = useState<string | null>(null);
-  const [fontLevel, setFontLevel] = useState<FontSizeLevel>(loadFontLevel);
+  const [fontLevel, setFontLevel] = useFontLevel();
   const fontScale = FONT_SCALES[fontLevel];
   const hasReports = reports.length > 0;
   const interaction = useRef<Interaction | null>(null);
@@ -75,11 +76,6 @@ export function DashboardView({ active, widgets, events, onRemoveWidget, onOpenB
     return () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", stop); window.removeEventListener("pointercancel", stop); };
   }, []);
 
-  function changeFontLevel(level: FontSizeLevel) {
-    setFontLevel(level);
-    saveFontLevel(level);
-  }
-
   function start(kind: Interaction["kind"], id: string, e: React.PointerEvent) {
     if (e.pointerType !== "mouse" && window.innerWidth < 760) return;
     const initial = layout[id];
@@ -97,14 +93,7 @@ export function DashboardView({ active, widgets, events, onRemoveWidget, onOpenB
       <div className="canvas-vignette" />
       <div className="canvas-intro"><span>Espacio de datos</span><strong>{widgets.length} {widgets.length === 1 ? "widget" : "widgets"}</strong></div>
       {active && (
-        <div className="text-size glass" role="group" aria-label="Tamaño del texto de los widgets" onPointerDown={(e) => e.stopPropagation()}>
-          <span>Texto</span>
-          {FONT_LEVELS.map((level, index) => (
-            <button key={level} type="button" className={fontLevel === level ? "active" : ""} aria-pressed={fontLevel === level} aria-label={FONT_LEVEL_LABELS[level]} title={FONT_LEVEL_LABELS[level]} onClick={() => changeFontLevel(level)}>
-              <span style={{ fontSize: 11 + index * 3 }}>A</span>
-            </button>
-          ))}
-        </div>
+        <TextSizeControl className="glass" level={fontLevel} onChange={setFontLevel} label="Tamaño del texto de los widgets y del asistente" />
       )}
       <WidgetFontScaleProvider value={fontScale}>
       <div className="canvas-widgets" style={{ "--wfs": fontScale } as React.CSSProperties}>

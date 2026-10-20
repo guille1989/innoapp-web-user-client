@@ -1,4 +1,4 @@
-import { createContext, useContext } from "react";
+import { createContext, useContext, useSyncExternalStore } from "react";
 
 /**
  * Tamaño del texto dentro de los widgets de la vista de Datos. Es una
@@ -6,6 +6,11 @@ import { createContext, useContext } from "react";
  * el resto de la app. El CSS lo recibe como `--wfs` en `.canvas-widgets`; los
  * gráficos que miden en píxeles (filas, márgenes de ejes) lo leen con
  * `useWidgetFontScale()` para que la geometría crezca junto con la letra.
+ *
+ * El mismo nivel escala el texto del asistente IA: se publica como `--afs` en
+ * <html> (el asistente vive fuera del canvas). Por eso el nivel es un store
+ * compartido: el selector del dashboard y el del panel del asistente quedan
+ * sincronizados.
  */
 export type FontSizeLevel = "normal" | "large" | "xlarge";
 
@@ -30,6 +35,32 @@ export function saveFontLevel(level: FontSizeLevel) {
   } catch {
     // Sin storage (modo privado, cuota): vuelve a "Normal" al recargar.
   }
+}
+
+let currentLevel = loadFontLevel();
+const listeners = new Set<() => void>();
+
+function publish(level: FontSizeLevel) {
+  document.documentElement.style.setProperty("--afs", String(FONT_SCALES[level]));
+}
+publish(currentLevel);
+
+function setFontLevel(level: FontSizeLevel) {
+  if (level === currentLevel) return;
+  currentLevel = level;
+  saveFontLevel(level);
+  publish(level);
+  listeners.forEach((listener) => listener());
+}
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  return () => { listeners.delete(listener); };
+}
+
+export function useFontLevel() {
+  const level = useSyncExternalStore(subscribe, () => currentLevel);
+  return [level, setFontLevel] as const;
 }
 
 const WidgetFontScaleContext = createContext(1);
