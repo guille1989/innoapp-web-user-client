@@ -7,45 +7,70 @@ import { useWidgetFontScale } from "../fontScale";
 import type { Widget } from "../../../types";
 
 /**
- * Evolución hora por hora de UN día (hoy o ayer). Las claves del backend son
+ * Evolución hora por hora de hoy contra ayer. Las claves del backend son
  * "YYYY-MM-DD HH" en la zona del navegador (`?tz=`, ver api/client.ts), así
  * que acá se comparan tal cual, sin pasar por Date. `useCloudData` solo pide
  * ayer y hoy para estos widgets.
+ *
+ * Sumas y conteos se dibujan ACUMULADOS durante el día (la curva siempre
+ * sube: "¿voy mejor o peor que ayer a esta hora?"). Promedio/máximo/mínimo no
+ * se pueden acumular, así que van hora por hora.
  */
-
-type Day = "today" | "yesterday";
-const DAY_LABELS: Record<Day, string> = { today: "Hoy", yesterday: "Ayer" };
 
 const HOUR_KEY = /^(\d{4}-\d{2}-\d{2}) (\d{2})$/;
 const TICK_CHAR_PX = 6;
 const BASE_MARGIN = { top: 18, right: 12, bottom: 20 };
+// Con "+38" sobre el valor final hace falta una línea más de aire arriba.
+const DELTA_TOP = 32;
 const X_TICK_SPACING = 40;
 const HOUR_TICK_STEPS = [1, 2, 3, 4, 6, 12];
 
-interface HourPoint {
-  hour: number;
-  value: number | null;
+type Values = Array<number | null>;
+
+interface HourSeries {
+  hours: number[];
+  today: Values;
+  /** null si ayer no tiene datos. */
+  yesterday: Values | null;
+  cumulative: boolean;
 }
 
 function hourLabel(hour: number): string {
   return `${hour}h`;
 }
 
-function buildHourSeries(widget: Pick<Widget, "data" | "field" | "agg">, dayKey: string, isToday: boolean): HourPoint[] {
+function hoursByKey(data: Widget["data"], dayKey: string): Map<number, number> {
   const byHour = new Map<number, number>();
-  for (const row of widget.data ?? []) {
+  for (const row of data ?? []) {
     const match = HOUR_KEY.exec(row.key);
     if (match && match[1] === dayKey) byHour.set(Number(match[2]), row.value);
   }
-  if (byHour.size === 0) return [];
-  const hours = [...byHour.keys()];
-  const first = Math.min(...hours);
-  // Hoy llega hasta la hora actual aunque no haya ventas todavía: la curva no "termina" antes de tiempo.
-  const last = Math.max(...hours, isToday ? new Date().getHours() : -1);
-  const empty = isAdditive(widget) ? 0 : null;
-  const points: HourPoint[] = [];
-  for (let hour = first; hour <= last; hour++) points.push({ hour, value: byHour.get(hour) ?? empty });
-  return points;
+  return byHour;
+}
+
+function buildSeries(widget: Pick<Widget, "data" | "field" | "agg">): HourSeries | null {
+  const today = hoursByKey(widget.data, localDateKey(0));
+  const yesterday = hoursByKey(widget.data, localDateKey(-1));
+  if (today.size === 0 && yesterday.size === 0) return null;
+
+  const first = Math.min(...today.keys(), ...yesterday.keys());
+  // Hoy llega hasta la hora actual aunque no haya ventas todavía; ayer se corta
+  // en esa misma hora para comparar "a esta hora" y no contra el día completo.
+  const last = Math.max(first, ...today.keys(), new Date().getHours());
+  const hours: number[] = [];
+  for (let hour = first; hour <= last; hour++) hours.push(hour);
+
+  const additive = isAdditive(widget);
+  const toValues = (byHour: Map<number, number>): Values => {
+    let running = 0;
+    return hours.map((hour) => {
+      const value = byHour.get(hour);
+      if (!additive) return value ?? null;
+      running += value ?? 0;
+      return running;
+    });
+  };
+  return { hours, today: toValues(today), yesterday: yesterday.size ? toValues(yesterday) : null, cumulative: additive };
 }
 
 function pickHourTicks(count: number, maxTicks: number): number[] {
@@ -56,46 +81,49 @@ function pickHourTicks(count: number, maxTicks: number): number[] {
   return indices.reverse();
 }
 
+const PCT = new Intl.NumberFormat("es-ES", { maximumFractionDigits: 1 });
+
+function signed(value: number, text: string): string {
+  return value > 0 ? `+${text}` : text;
+}
+
 export function HourlyChart({ widget: w }: { widget: Widget }) {
   const scale = useWidgetFontScale();
-  const [day, setDay] = useState<Day>("today");
   const [active, setActive] = useState<number | null>(null);
   const [plotRef, size] = useElementSize<HTMLDivElement>();
 
-  const dayKey = localDateKey(day === "today" ? 0 : -1);
-  const points = buildHourSeries(w, dayKey, day === "today");
-  const activeIndex = active !== null && active < points.length ? active : null;
+  const series = buildSeries(w);
 
-  const controls = (
-    <div className="chart-controls">
-      <div className="chart-segmented" role="group" aria-label="Día">
-        {(Object.keys(DAY_LABELS) as Day[]).map((item) => (
-          <button key={item} type="button" className={day === item ? "active" : ""} aria-pressed={day === item} onClick={() => { setDay(item); setActive(null); }}>
-            {DAY_LABELS[item]}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-
-  if (points.length === 0) {
+  if (!series) {
     return (
       <div className="line-chart">
-        {controls}
         <div className="line-body">
-          <div className="line-plot line-plot-empty">
-            <span className="widget-empty">{(w.data ?? []).length ? `Sin ventas ${day === "today" ? "hoy" : "ayer"}` : "Todavía no hay datos para graficar"}</span>
-          </div>
+          <div className="line-plot line-plot-empty"><span className="widget-empty">Todavía no hay datos para graficar</span></div>
         </div>
       </div>
     );
   }
 
-  const values = points.flatMap((point) => (point.value === null ? [] : [point.value]));
+  const { hours, today, yesterday, cumulative } = series;
+  const count = hours.length;
+  const activeIndex = active !== null && active < count ? active : null;
+
+  let lastIndex = -1;
+  today.forEach((value, index) => { if (value !== null) lastIndex = index; });
+  const todayEnd = lastIndex >= 0 ? (today[lastIndex] as number) : null;
+  const yesterdayEnd = yesterday && lastIndex >= 0 ? yesterday[lastIndex] : null;
+  const delta = cumulative && todayEnd !== null && yesterdayEnd !== null ? todayEnd - yesterdayEnd : null;
+  const pct = delta !== null && yesterdayEnd ? (delta / yesterdayEnd) * 100 : null;
+
+  const subtitle = cumulative
+    ? `Acumulado del día${pct !== null ? ` · ${signed(pct, PCT.format(pct))} % vs ayer` : ""}`
+    : `Por hora${yesterday ? " · hoy vs ayer" : ""}`;
+
+  const values = [...today, ...(yesterday ?? [])].flatMap((value) => (value === null ? [] : [value]));
   const maxValue = Math.max(0, ...values);
   const minValue = Math.min(0, ...values);
   const integer = w.field === "event_count" || (w.field === "quantity" && w.agg !== "avg");
-  const MARGIN = { top: BASE_MARGIN.top * scale, right: BASE_MARGIN.right, bottom: BASE_MARGIN.bottom * scale };
+  const MARGIN = { top: (delta !== null ? DELTA_TOP : BASE_MARGIN.top) * scale, right: BASE_MARGIN.right, bottom: BASE_MARGIN.bottom * scale };
   const plotHeight = Math.max(12, size.height - MARGIN.top - MARGIN.bottom);
   const ticks = niceTicks(minValue, maxValue, Math.min(5, Math.max(2, Math.floor(plotHeight / (30 * scale)))), integer);
   const tickLabels = ticks.map(fmtAxis);
@@ -103,54 +131,58 @@ export function HourlyChart({ widget: w }: { widget: Widget }) {
   const plotWidth = Math.max(12, size.width - left - MARGIN.right);
   const yMin = ticks[0];
   const yMax = ticks[ticks.length - 1];
-  const xAt = (index: number) => (points.length === 1 ? left + plotWidth / 2 : left + (index / (points.length - 1)) * plotWidth);
+  const xAt = (index: number) => (count === 1 ? left + plotWidth / 2 : left + (index / (count - 1)) * plotWidth);
   const yAt = (value: number) => MARGIN.top + plotHeight - ((value - yMin) / (yMax - yMin || 1)) * plotHeight;
   const baseY = yAt(Math.min(Math.max(0, yMin), yMax));
 
   // Las horas sin valor (promedios/máximos de horas sin tickets) cortan la línea en vez de inventar un 0.
-  const segments: Array<Array<[number, number]>> = [];
-  let current: Array<[number, number]> = [];
-  points.forEach((point, index) => {
-    if (point.value === null) {
-      if (current.length) segments.push(current);
-      current = [];
-    } else {
-      current.push([xAt(index), yAt(point.value)]);
-    }
-  });
-  if (current.length) segments.push(current);
+  const toSegments = (list: Values): Array<Array<[number, number]>> => {
+    const segments: Array<Array<[number, number]>> = [];
+    let current: Array<[number, number]> = [];
+    list.forEach((value, index) => {
+      if (value === null) {
+        if (current.length) segments.push(current);
+        current = [];
+      } else {
+        current.push([xAt(index), yAt(value)]);
+      }
+    });
+    if (current.length) segments.push(current);
+    return segments;
+  };
   const toPath = (segment: Array<[number, number]>) => segment.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)},${y.toFixed(1)}`).join("");
-  const lines = segments.filter((segment) => segment.length > 1);
+
+  const todaySegments = toSegments(today);
+  const lines = todaySegments.filter((segment) => segment.length > 1);
   const linePath = lines.map(toPath).join("");
   const areaPath = lines.map((segment) => `${toPath(segment)}L${segment[segment.length - 1][0].toFixed(1)},${baseY.toFixed(1)}L${segment[0][0].toFixed(1)},${baseY.toFixed(1)}Z`).join("");
-  const isolated = segments.filter((segment) => segment.length === 1).map((segment) => segment[0]);
+  const isolated = todaySegments.filter((segment) => segment.length === 1).map((segment) => segment[0]);
+  const yesterdayPath = yesterday ? toSegments(yesterday).filter((segment) => segment.length > 1).map(toPath).join("") : "";
 
-  let lastIndex = -1;
+  // Sin acumular, además del último valor se marca el máximo; acumulado, el máximo ES el último.
   let maxIndex = -1;
-  points.forEach((point, index) => {
-    if (point.value === null) return;
-    lastIndex = index;
-    if (maxIndex < 0 || point.value > (points[maxIndex].value ?? -Infinity)) maxIndex = index;
+  today.forEach((value, index) => {
+    if (value !== null && (maxIndex < 0 || value > (today[maxIndex] ?? -Infinity))) maxIndex = index;
   });
-  const showMax = maxIndex >= 0 && maxIndex !== lastIndex && maxValue > 0 && Math.abs(xAt(maxIndex) - xAt(lastIndex)) > 52 * scale;
+  const showMax = !cumulative && maxIndex >= 0 && maxIndex !== lastIndex && maxValue > 0 && Math.abs(xAt(maxIndex) - xAt(lastIndex)) > 52 * scale;
   const labelled = [lastIndex, ...(showMax ? [maxIndex] : [])].filter((index) => index >= 0);
 
-  const xTicks = pickHourTicks(points.length, Math.floor(plotWidth / (X_TICK_SPACING * scale)));
+  const xTicks = pickHourTicks(count, Math.floor(plotWidth / (X_TICK_SPACING * scale)));
   const anchorFor = (x: number) => (x < left + 12 ? "start" : x > left + plotWidth - 12 ? "end" : "middle");
 
   function indexAt(clientX: number, element: HTMLElement): number {
-    if (points.length === 1) return 0;
+    if (count === 1) return 0;
     const x = clientX - element.getBoundingClientRect().left;
-    return Math.min(points.length - 1, Math.max(0, Math.round(((x - left) / plotWidth) * (points.length - 1))));
+    return Math.min(count - 1, Math.max(0, Math.round(((x - left) / plotWidth) * (count - 1))));
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
-    const last = points.length - 1;
+    const end = count - 1;
     const moves: Record<string, (index: number) => number> = {
       ArrowLeft: (index) => Math.max(0, index - 1),
-      ArrowRight: (index) => Math.min(last, index + 1),
+      ArrowRight: (index) => Math.min(end, index + 1),
       Home: () => 0,
-      End: () => last,
+      End: () => end,
     };
     if (e.key === "Escape") setActive(null);
     if (!moves[e.key]) return;
@@ -158,14 +190,26 @@ export function HourlyChart({ widget: w }: { widget: Widget }) {
     setActive((index) => moves[e.key](index ?? Math.max(0, lastIndex)));
   }
 
-  const fullHourLabel = (hour: number) => `${DAY_LABELS[day]}, ${hour}:00 – ${hour}:59`;
+  const fullHourLabel = (hour: number) => (cumulative ? `Hoy, hasta las ${hour}:59` : `Hoy, ${hour}:00 – ${hour}:59`);
   const unitFor = (value: number) => metricLabel(w, value);
-  const activePoint = activeIndex !== null ? points[activeIndex] : null;
-  const summary = `${w.title}, ${DAY_LABELS[day].toLowerCase()} hora por hora. Máximo ${formatWidgetValue(w.field, maxValue)} ${unitFor(maxValue)}${maxIndex >= 0 ? ` (${fullHourLabel(points[maxIndex].hour)})` : ""}. Usa las flechas para recorrer las horas.`;
+  const fmt = (value: number) => formatWidgetValue(w.field, value);
+  const activeValue = activeIndex !== null ? today[activeIndex] : null;
+  const activeYesterday = activeIndex !== null && yesterday ? yesterday[activeIndex] : null;
+  const summary = `${w.title}, ${subtitle.toLowerCase()}. ${todayEnd !== null ? `Hoy ${fmt(todayEnd)} ${unitFor(todayEnd)}` : "Sin ventas hoy"}${yesterdayEnd !== null ? `, ayer a esta hora ${fmt(yesterdayEnd)}` : ""}. Usa las flechas para recorrer las horas.`;
+
+  // El "+38" va justo encima del valor final: debajo la curva llega desde la izquierda y lo taparía.
+  const endX = lastIndex >= 0 ? xAt(lastIndex) : 0;
+  const deltaY = (todayEnd !== null ? yAt(todayEnd) : 0) - 23 * scale;
 
   return (
     <div className="line-chart">
-      {controls}
+      <div className="hourly-head">
+        <span className="hourly-sub">{subtitle}</span>
+        <span className="hourly-legend" aria-hidden="true">
+          <span className="hourly-key"><i className="hourly-swatch" />Hoy</span>
+          {yesterday && <span className="hourly-key"><i className="hourly-swatch prev" />Ayer</span>}
+        </span>
+      </div>
       <div className="line-body">
         <div
           className="line-plot"
@@ -194,16 +238,17 @@ export function HourlyChart({ widget: w }: { widget: Widget }) {
                 </g>
               ))}
               {xTicks.map((index) => (
-                <text key={points[index].hour} className="chart-tick chart-tick-x" x={xAt(index)} y={size.height - 5 * scale} textAnchor={anchorFor(xAt(index))}>
-                  {hourLabel(points[index].hour)}
+                <text key={hours[index]} className="chart-tick chart-tick-x" x={xAt(index)} y={size.height - 5 * scale} textAnchor={anchorFor(xAt(index))}>
+                  {hourLabel(hours[index])}
                 </text>
               ))}
               {areaPath && <path d={areaPath} fill={`url(#hour-fill-${w.id})`} />}
+              {yesterdayPath && <path className="line-stroke-prev" d={yesterdayPath} />}
               {linePath && <path className="line-stroke" d={linePath} />}
               {isolated.map(([x, y]) => <circle key={`${x}-${y}`} className="line-dot-small" cx={x} cy={y} r={2.5} />)}
               {activeIndex !== null && <line className="chart-crosshair" x1={xAt(activeIndex)} x2={xAt(activeIndex)} y1={MARGIN.top - 6} y2={MARGIN.top + plotHeight} />}
               {labelled.map((index) => {
-                const value = points[index].value ?? 0;
+                const value = today[index] ?? 0;
                 const x = xAt(index);
                 const y = yAt(value);
                 const labelY = y - 10 < 10 * scale ? y + 18 * scale : y - 10;
@@ -214,30 +259,37 @@ export function HourlyChart({ widget: w }: { widget: Widget }) {
                   </g>
                 );
               })}
-              {activePoint && activePoint.value !== null && <circle className="line-marker active" cx={xAt(activeIndex!)} cy={yAt(activePoint.value)} r={4.5} />}
+              {delta !== null && (
+                <text className={delta >= 0 ? "chart-delta" : "chart-delta neg"} x={endX} y={deltaY} textAnchor={anchorFor(endX)} opacity={activeIndex !== null ? 0.35 : 1}>
+                  {signed(delta, fmtAxis(delta))}
+                </text>
+              )}
+              {activeValue !== null && <circle className="line-marker active" cx={xAt(activeIndex!)} cy={yAt(activeValue)} r={4.5} />}
             </svg>
           )}
-          {activePoint && size.width > 0 && (
+          {activeIndex !== null && size.width > 0 && (
             <ChartTooltip
-              x={xAt(activeIndex!)}
-              y={activePoint.value !== null ? yAt(activePoint.value) : MARGIN.top}
+              x={xAt(activeIndex)}
+              y={activeValue !== null ? yAt(activeValue) : MARGIN.top}
               containerWidth={size.width}
               containerHeight={size.height}
-              value={activePoint.value === null ? "Sin datos" : formatWidgetValue(w.field, activePoint.value)}
-              unit={activePoint.value === null ? "" : unitFor(activePoint.value)}
-              label={fullHourLabel(activePoint.hour)}
+              value={activeValue === null ? "Sin datos" : fmt(activeValue)}
+              unit={activeValue === null ? "" : unitFor(activeValue)}
+              label={fullHourLabel(hours[activeIndex])}
+              extra={activeYesterday !== null ? `Ayer a esta hora: ${fmt(activeYesterday)}` : undefined}
             />
           )}
         </div>
       </div>
       <table className="sr-only">
         <caption>{w.title}</caption>
-        <thead><tr><th scope="col">Hora</th><th scope="col">Valor</th></tr></thead>
+        <thead><tr><th scope="col">Hora</th><th scope="col">Hoy</th><th scope="col">Ayer</th></tr></thead>
         <tbody>
-          {points.map((point) => (
-            <tr key={point.hour}>
-              <th scope="row">{fullHourLabel(point.hour)}</th>
-              <td>{point.value === null ? "Sin datos" : formatWidgetValue(w.field, point.value)}</td>
+          {hours.map((hour, index) => (
+            <tr key={hour}>
+              <th scope="row">{hourLabel(hour)}</th>
+              <td>{today[index] === null ? "Sin datos" : fmt(today[index] as number)}</td>
+              <td>{yesterday === null || yesterday[index] === null ? "Sin datos" : fmt(yesterday[index] as number)}</td>
             </tr>
           ))}
         </tbody>
