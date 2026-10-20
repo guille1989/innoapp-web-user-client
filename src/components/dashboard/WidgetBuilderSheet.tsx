@@ -6,7 +6,7 @@ import type { Aggregation, AggregatableField, GroupField, Widget, WidgetType } f
 interface WidgetBuilderSheetProps {
   open: boolean;
   onClose: () => void;
-  onCreate: (cfg: Omit<Widget, "id">) => void;
+  onCreate: (cfg: Omit<Widget, "id">) => Promise<void>;
 }
 
 const TYPE_OPTIONS: Array<{ type: WidgetType; label: string; icon: () => React.ReactElement }> = [
@@ -16,7 +16,7 @@ const TYPE_OPTIONS: Array<{ type: WidgetType; label: string; icon: () => React.R
   { type: "donut", label: "Dona", icon: IconDonut },
 ];
 
-const FIELD_OPTIONS: AggregatableField[] = ["event_count", "total", "quantity", "unitPrice", "subtotal", "discount", "tip"];
+const FIELD_OPTIONS: AggregatableField[] = ["event_count", "total", "quantity", "unitPrice", "subtotal", "discount", "tip", "tax"];
 const AGG_OPTIONS: Aggregation[] = ["sum", "avg", "max", "min", "count"];
 const GROUP_OPTIONS: GroupField[] = ["port", "agent", "status", "parsedBy", "description"];
 
@@ -27,6 +27,8 @@ export function WidgetBuilderSheet({ open, onClose, onCreate }: WidgetBuilderShe
   const [agg, setAgg] = useState<Aggregation>("sum");
   const [group, setGroup] = useState<GroupField>("agent");
   const [timeAxis, setTimeAxis] = useState<"day" | "hour">("day");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   function reset() {
     setType("kpi");
@@ -42,14 +44,23 @@ export function WidgetBuilderSheet({ open, onClose, onCreate }: WidgetBuilderShe
     onClose();
   }
 
-  function handleCreate() {
+  async function handleCreate() {
+    if (saving) return;
     const groupVal = type === "kpi" ? null : type === "line" ? timeAxis : group;
     const autoTitle =
       FIELD_LABELS[field] +
       (agg && field !== "event_count" ? ` (${AGG_LABELS[agg].toLowerCase()})` : "") +
       (groupVal ? ` por ${GROUP_LABELS[groupVal].toLowerCase()}` : "");
-    onCreate({ type, title: title.trim() || autoTitle, field, agg, group: groupVal });
-    handleClose();
+    setSaving(true);
+    setError(null);
+    try {
+      await onCreate({ type, title: title.trim() || autoTitle, field, agg, group: groupVal });
+      handleClose();
+    } catch (err) {
+      if (!(err instanceof DOMException && err.name === "AbortError")) setError(err instanceof Error ? err.message : "No se pudo crear el widget");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -60,6 +71,7 @@ export function WidgetBuilderSheet({ open, onClose, onCreate }: WidgetBuilderShe
         <div className="modal-sub">Elige qué medir a partir de tus datos.</div>
       </div>
       <div className="builder-body">
+        {error && <div role="alert">{error}</div>}
         <div className="field">
           <label className="field-label">Tipo de visualización</label>
           <div className="type-options">
@@ -161,8 +173,8 @@ export function WidgetBuilderSheet({ open, onClose, onCreate }: WidgetBuilderShe
           </div>
         )}
 
-        <button className="btn-primary" onClick={handleCreate}>
-          Crear widget
+        <button className="btn-primary" onClick={() => void handleCreate()} disabled={saving}>
+          {saving ? "Creando…" : "Crear widget"}
         </button>
       </div>
     </div>

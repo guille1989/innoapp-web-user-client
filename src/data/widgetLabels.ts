@@ -7,6 +7,7 @@ export const FIELD_LABELS: Record<AggregatableField, string> = {
   subtotal: "Subtotal",
   discount: "Descuento",
   tip: "Propina",
+  tax: "Impuestos",
   total: "Total",
 };
 

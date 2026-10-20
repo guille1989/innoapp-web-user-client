@@ -92,7 +92,9 @@ export function resolveRange(
 }
 
 /** Sumas y conteos rellenan los periodos vacíos con 0; promedio/máximo/mínimo los dejan como hueco. */
-export function isAdditive(widget: Pick<Widget, "field" | "agg">): boolean {
+export function isAdditive(widget: Pick<Widget, "field" | "agg"> & Partial<Pick<Widget, "group">>): boolean {
+  // Un ticket con dos productos pertenece a ambas categorías: no sumar sus conteos.
+  if (widget.field === "event_count" && widget.group === "description") return false;
   return widget.field === "event_count" || widget.agg === "sum" || widget.agg === "count";
 }
 
@@ -119,11 +121,11 @@ export function buildTimeSeries(
   granularity: TimeGranularity,
 ): TimePoint[] {
   const agg = effectiveAgg(widget);
-  const buckets = new Map<string, number[]>();
+  const buckets = new Map<string, AggregateRow[]>();
   for (const row of rows) {
     if (!DAY_KEY.test(row.key) || row.key < range.from || row.key > range.to) continue;
     const key = periodKey(row.key, granularity);
-    buckets.set(key, [...(buckets.get(key) ?? []), row.value]);
+    buckets.set(key, [...(buckets.get(key) ?? []), row]);
   }
   const empty = isAdditive(widget) ? 0 : null;
   const points: TimePoint[] = [];
@@ -135,11 +137,15 @@ export function buildTimeSeries(
   return points;
 }
 
-function reduceValues(values: number[], agg: Aggregation): number {
-  if (agg === "max") return Math.max(...values);
-  if (agg === "min") return Math.min(...values);
-  const sum = values.reduce((total, value) => total + value, 0);
-  return agg === "avg" ? sum / values.length : sum;
+function reduceValues(rows: AggregateRow[], agg: Aggregation): number | null {
+  if (agg === "max") return Math.max(...rows.map((row) => row.value));
+  if (agg === "min") return Math.min(...rows.map((row) => row.value));
+  if (agg !== "avg") return rows.reduce((total, row) => total + row.value, 0);
+  if (rows.length === 1) return rows[0].value;
+  // Versiones anteriores de la API no enviaban pesos: no inventar una media.
+  if (rows.some((row) => !Number.isFinite(row.sampleCount) || row.sampleCount! <= 0)) return null;
+  const count = rows.reduce((total, row) => total + row.sampleCount!, 0);
+  return rows.reduce((total, row) => total + row.value * row.sampleCount!, 0) / count;
 }
 
 /**

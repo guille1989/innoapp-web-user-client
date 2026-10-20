@@ -4,45 +4,14 @@ import {
   NotAuthorizedException,
   UserNotFoundException,
 } from "@aws-sdk/client-cognito-identity-provider";
+import type { Session } from "./session";
+export { userFromIdToken } from "./session";
+export type { Session, SessionUser } from "./session";
 
 const REGION = import.meta.env.VITE_COGNITO_REGION;
 const CLIENT_ID = import.meta.env.VITE_COGNITO_CLIENT_ID;
 
 const client = new CognitoIdentityProviderClient({ region: REGION });
-
-export interface Session {
-  idToken: string;
-  accessToken: string;
-  refreshToken: string;
-  /** epoch ms */
-  expiresAt: number;
-}
-
-export interface SessionUser {
-  email: string;
-  tenantId: string;
-}
-
-function decodeJwtPayload(token: string): Record<string, unknown> {
-  const payload = token.split(".")[1];
-  const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
-  return JSON.parse(atob(normalized));
-}
-
-/**
- * Solo para mostrar quién sos en la UI — nunca se usa esto para decidir
- * qué datos mostrar, eso lo resuelve el backend releyendo el mismo claim
- * directo del JWT (ver `shared/auth.ts` en ticket-parsing-cloud). No hace
- * falta verificar la firma acá: si alguien lo edita a mano, el backend
- * rechaza el token de todos modos.
- */
-export function userFromIdToken(idToken: string): SessionUser {
-  const claims = decodeJwtPayload(idToken);
-  return {
-    email: typeof claims.email === "string" ? claims.email : "",
-    tenantId: typeof claims["custom:tenantId"] === "string" ? claims["custom:tenantId"] : "",
-  };
-}
 
 export async function login(email: string, password: string): Promise<Session> {
   const result = await client.send(

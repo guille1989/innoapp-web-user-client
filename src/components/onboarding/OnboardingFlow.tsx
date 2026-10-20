@@ -31,7 +31,13 @@ export function OnboardingFlow({ businessName, state, agents, codes, tickets, wi
   const [error, setError] = useState<string | null>(null);
   const index = STEPS.indexOf(step);
 
-  useEffect(() => { if (!state.startedAt) void onAction("start"); }, [state.startedAt, onAction]);
+  useEffect(() => {
+    let cancelled = false;
+    if (!state.startedAt) void onAction("start").catch((err) => {
+      if (!cancelled && !(err instanceof DOMException && err.name === "AbortError")) setError(err instanceof Error ? err.message : String(err));
+    });
+    return () => { cancelled = true; };
+  }, [state.startedAt, onAction]);
   useEffect(() => {
     if (step !== "connect") return;
     // Primera comprobación inmediata; después, polling ligero. La activación

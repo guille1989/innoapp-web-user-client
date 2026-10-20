@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { api, ApiError, type ApiAssistantHistoryTurn, type ApiReport } from "../../api/client";
 import { downloadReportCsv, printReport } from "../../lib/report";
 import { respondLocally } from "../../lib/aiAssistant";
+import { useRequestScope } from "../../hooks/useRequestScope";
 import { IconAi, IconClose, IconSend } from "../icons";
 import { TextSizeControl } from "../dashboard/TextSizeControl";
 import { useFontLevel } from "../dashboard/fontScale";
-import type { BusinessEvent, Widget } from "../../types";
+import type { Widget } from "../../types";
 
 // Debe coincidir con MAX_HISTORY_TURNS en ticket-parsing-cloud/src/assistant/askHandler.ts.
 const MAX_HISTORY_TURNS = 6;
@@ -18,8 +19,7 @@ interface AiSheetProps {
   open: boolean;
   onOpen: () => void;
   onClose: () => void;
-  events: BusinessEvent[];
-  onCreateWidget: (cfg: Omit<Widget, "id">) => void;
+  onCreateWidget: (cfg: Omit<Widget, "id">) => Promise<void>;
   idToken: string;
   businessName: string;
   /** El backend guardó un reporte nuevo: la lista de Reportes y el widget del dashboard se refrescan. */
@@ -35,7 +35,7 @@ interface ChatMessage {
 const SUGGESTED = [
   { q: "¿Cuál sucursal vendió más hoy?", label: "Sucursal con más ventas" },
   { q: "Hazme una gráfica de ventas por sucursal", label: "Gráfica por sucursal" },
-  { q: "Crea un kpi con el conteo de devoluciones", label: "KPI de devoluciones" },
+  { q: "Crea un kpi con el conteo de tickets", label: "KPI de tickets" },
 ];
 
 let msgSeq = 1;
@@ -63,7 +63,8 @@ function ReportMessage({ answer, report, businessName, saved }: { answer: string
   );
 }
 
-export function AiSheet({ open, onOpen, onClose, events, onCreateWidget, idToken, businessName, onReportSaved }: AiSheetProps) {
+export function AiSheet({ open, onOpen, onClose, onCreateWidget, idToken, businessName, onReportSaved }: AiSheetProps) {
+  const scope = useRequestScope(idToken);
   const [messages, setMessages] = useState<ChatMessage[]>([{ id: msgSeq++, role: "ai", content: "Hola, soy tu asistente de datos. Puedo analizar las lecturas de tus agentes y crear widgets por ti." }]);
   const [fontLevel, setFontLevel] = useFontLevel();
   const [input, setInput] = useState("");
@@ -105,7 +106,8 @@ export function AiSheet({ open, onOpen, onClose, events, onCreateWidget, idToken
     const value = question.trim();
     if (!value || typing) return;
     const previousQuestion = [...history].reverse().find((t) => t.role === "user")?.text;
-    const isLocal = respondLocally(value, events, previousQuestion) !== null;
+    const local = respondLocally(value, previousQuestion);
+    const isLocal = local !== null;
     if (!isLocal && blocked) return;
     setMessages((prev) => [...prev, { id: msgSeq++, role: "user", content: value }]);
     setInput("");
@@ -113,24 +115,26 @@ export function AiSheet({ open, onOpen, onClose, events, onCreateWidget, idToken
     setTyping(true);
     scrollToBottom();
 
-    // Primero los patrones locales (crear widgets, "¿qué robot vendió más?")
-    // — gratis e instantáneos, sin red. Lo que no reconocen se lo mandamos
-    // al asistente real (Bedrock + datos del negocio), no a un texto fijo.
-    const local = respondLocally(value, events, previousQuestion);
+    const task = scope.start("message");
+    // La ruta local solo propone widgets; las cifras se consultan en el servidor.
     if (local) {
-      window.setTimeout(() => {
-        const content = local.kind === "widget" ? <><span>Listo, añadí </span><span className="mono-inline">{local.cfg.title}</span><span> a tu dashboard.</span></> : local.text;
-        if (local.kind === "widget") onCreateWidget(local.cfg);
-        setTyping(false);
-        pushAiMessage(content);
-      }, 650);
+      try {
+        await onCreateWidget(local.cfg);
+        if (task.isCurrent()) pushAiMessage(<><span>Listo, añadí </span><span className="mono-inline">{local.cfg.title}</span><span> a tu dashboard.</span></>);
+      } catch (err) {
+        if (task.isCurrent()) pushAiMessage(err instanceof Error ? err.message : "No se pudo crear el widget.");
+      } finally {
+        if (task.isCurrent()) setTyping(false);
+        task.finish();
+      }
       return;
     }
 
     setNow(Date.now());
     setUsage((u) => (u.minute === currentMinute() ? { minute: u.minute, count: u.count + 1 } : { minute: currentMinute(), count: 1 }));
     try {
-      const { answer, report, reportId } = await api.assistantAsk(idToken, value, history);
+      const { answer, report, reportId } = await api.assistantAsk(idToken, value, history, task.signal);
+      if (!task.isCurrent()) return;
       setTyping(false);
       if (reportId) onReportSaved();
       pushAiMessage(report ? <ReportMessage answer={answer} report={report} businessName={businessName} saved={Boolean(reportId)} /> : <RichText text={answer} />);
@@ -140,6 +144,7 @@ export function AiSheet({ open, onOpen, onClose, events, onCreateWidget, idToken
       ];
       setHistory((prev) => [...prev, ...newTurns].slice(-MAX_HISTORY_TURNS));
     } catch (err) {
+      if (!task.isCurrent()) return;
       setTyping(false);
       if (err instanceof ApiError && err.status === 429) {
         // Sincroniza con el servidor: si dice que no hay más, el medidor queda en 0 hasta el próximo minuto.
@@ -149,6 +154,8 @@ export function AiSheet({ open, onOpen, onClose, events, onCreateWidget, idToken
       // TypeError = fetch falló antes de recibir respuesta (red); cualquier otro Error trae el mensaje de la API (ej. rate limit 429).
       const apiMessage = err instanceof Error && !(err instanceof TypeError) ? err.message : null;
       pushAiMessage(apiMessage ?? "No pude conectarme con el asistente, probá de nuevo en un momento.");
+    } finally {
+      task.finish();
     }
   }
 

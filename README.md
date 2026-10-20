@@ -2,7 +2,39 @@
 
 Dashboard React/Vite de InnoApp. Usa Cognito para iniciar sesión y la API
 real para tickets, widgets, robots, códigos de activación y datos agregados
-de Athena. Las lecturas se refrescan cada 15 segundos.
+de Athena. Las lecturas se refrescan cada 30 segundos mientras la pestaña está visible.
+
+## Sesiones y métricas
+
+El árbol autenticado se reinicia al cambiar de tenant o usuario. Las operaciones
+pendientes de otra identidad se invalidan; renovar el JWT de la misma cuenta
+conserva su conversación y sus mutaciones. Login, logout y renovación también
+se coordinan entre pestañas.
+
+Las preguntas sobre cifras se envían al backend; el navegador no responde con
+la muestra de tickets recientes. Las métricas de venta consultan tickets
+confirmados por defecto. Los KPIs usan exclusivamente su resultado de servidor:
+un error conserva el último resultado con un aviso y fecha; un valor ausente
+se muestra como «Sin datos», conservando los ceros observados.
+
+Los promedios temporales se reagrupan usando `sampleCount` de la API. Una
+respuesta antigua sin pesos no genera un promedio semanal/mensual de promedios.
+Los informes y CSV también conservan la ausencia de datos y los decimales.
+
+Para desarrollo y pruebas se usa Node.js 24:
+
+```bash
+npm test
+npm run lint
+npm run build
+```
+
+Las pruebas usan `node:test` y el compilador TypeScript instalado, sin un
+framework adicional. Incluyen carreras de sesión, cancelación de exportaciones,
+promedios ponderados y estados de KPI.
+
+Estos cambios requieren publicar primero el backend actualizado (contrato
+`value: number | null`, `sampleCount` opcional) y después la web.
 
 ## Configuración
 

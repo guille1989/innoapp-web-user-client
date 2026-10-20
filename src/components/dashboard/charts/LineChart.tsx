@@ -104,12 +104,15 @@ export function LineChart({ widget: w }: { widget: Widget }) {
     <RangePanel resolved={range} onFrom={(value) => setView((current) => ({ ...current, from: value }))} onTo={(value) => setView((current) => ({ ...current, to: value }))} onDone={() => setEditingRange(false)} />
   );
 
-  if (!hasDataInRange) {
+  const hasValues = points.some((point) => point.value !== null);
+  if (!hasDataInRange || !hasValues) {
     return (
       <div className="line-chart">
         {controls}
         <div className="line-body">
-          <div className="line-plot line-plot-empty"><span className="widget-empty">{dailyRows.length ? "Sin datos en este rango" : "Todavía no hay datos para graficar"}</span></div>
+          <div className="line-plot line-plot-empty"><span className="widget-empty">{hasDataInRange
+            ? "Faltan los pesos para agrupar este promedio. Consulta por día o actualiza los datos."
+            : dailyRows.length ? "Sin datos en este rango" : "Todavía no hay datos para graficar"}</span></div>
           {rangePanel}
         </div>
       </div>

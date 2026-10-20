@@ -56,8 +56,8 @@ export function BarChart({ widget: w }: { widget: Widget }) {
   const rowHeight = ROW_HEIGHT * scale;
   const [view, setView] = useState(() => loadView(w.id));
   const [editingRange, setEditingRange] = useState(false);
-  const [ranged, setRanged] = useState<{ id: string; rows: Row[] } | null>(null);
-  const [rangeError, setRangeError] = useState(false);
+  const [ranged, setRanged] = useState<{ id: string; rows: Row[]; updatedAt: string } | null>(null);
+  const [failedRange, setFailedRange] = useState<string | null>(null);
   const [chartRef, size] = useElementSize<HTMLDivElement>();
   const [scrollTop, setScrollTop] = useState(0);
   const [hover, setHover] = useState<{ index: number; x: number } | null>(null);
@@ -66,20 +66,22 @@ export function BarChart({ widget: w }: { widget: Widget }) {
   const range = resolveRange(view.range, view, undefined, undefined);
   const filtered = view.range !== "all";
   const requestKey = `${w.id}|${range.from}|${range.to}`;
+  const rangeError = failedRange === requestKey;
 
   // `w.data` cambia con cada refresco general (cada 30 s): se vuelve a pedir el
   // rango para que la vista filtrada se mantenga al día igual que "Todo".
   useEffect(() => {
     if (!filtered || !idToken) return;
     let cancelled = false;
-    api.widgetData(idToken, w.id, { dateFrom: range.from, dateTo: range.to })
+    const controller = new AbortController();
+    api.widgetData(idToken, w.id, { dateFrom: range.from, dateTo: range.to }, controller.signal)
       .then(({ data }) => {
         if (cancelled) return;
-        setRanged({ id: requestKey, rows: data.map((row) => ({ key: row.label ?? "total", value: row.value })) });
-        setRangeError(false);
+        setRanged({ id: requestKey, rows: data.flatMap((row) => row.value === null ? [] : [{ key: row.label ?? "total", value: row.value }]), updatedAt: new Date().toISOString() });
+        setFailedRange(null);
       })
-      .catch(() => { if (!cancelled) setRangeError(true); });
-    return () => { cancelled = true; };
+      .catch(() => { if (!cancelled) setFailedRange(requestKey); });
+    return () => { cancelled = true; controller.abort(); };
   }, [filtered, idToken, w.id, range.from, range.to, requestKey, w.data]);
 
   const loadingRange = filtered && !rangeError && ranged?.id !== requestKey;
@@ -125,6 +127,7 @@ export function BarChart({ widget: w }: { widget: Widget }) {
 
   return (
     <div className="bar-chart">
+      {rangeError && <div className="widget-data-notice" role="status">Datos del rango sin actualizar{ranged?.id === requestKey ? " · " + new Date(ranged.updatedAt).toLocaleString("es-ES") : ""}</div>}
       {controls}
       <div
         className="bar-body"

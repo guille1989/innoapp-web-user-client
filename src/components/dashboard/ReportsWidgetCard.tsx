@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { ApiReportListItem } from "../../api/client";
 import { downloadStoredReportCsv, expiryLabel, openStoredReportPdf } from "../../lib/storedReports";
+import { useRequestScope } from "../../hooks/useRequestScope";
 
 interface ReportsWidgetCardProps {
   reports: ApiReportListItem[];
@@ -13,18 +14,23 @@ interface ReportsWidgetCardProps {
 
 /** Sin límite fijo de filas: el cuerpo scrollea si la tarjeta es chica (los reportes viven 30 días como mucho). */
 export function ReportsWidgetCard({ reports, idToken, businessName, onDelete, onDragStart, onResizeStart }: ReportsWidgetCardProps) {
+  const scope = useRequestScope(idToken);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function run(item: ApiReportListItem, action: () => Promise<void>) {
+  async function run(item: ApiReportListItem, action: (signal: AbortSignal) => Promise<void>) {
+    const task = scope.start("report:" + item.reportId);
     setBusyId(item.reportId);
     setError(null);
     try {
-      await action();
+      await action(task.signal);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo abrir el reporte");
+      if (task.isCurrent() && !(err instanceof DOMException && err.name === "AbortError")) {
+        setError(err instanceof Error ? err.message : "No se pudo abrir el reporte");
+      }
     } finally {
-      setBusyId(null);
+      if (task.isCurrent()) setBusyId((current) => current === item.reportId ? null : current);
+      task.finish();
     }
   }
 
@@ -46,8 +52,8 @@ export function ReportsWidgetCard({ reports, idToken, businessName, onDelete, on
                 <span>{new Date(item.createdAt).toLocaleDateString("es-CO", { day: "numeric", month: "short" })} · {expiryLabel(item.expiresAt)}</span>
               </div>
               <div className="report-row-actions">
-                <button className="chip" disabled={busy} onClick={() => void run(item, () => openStoredReportPdf(idToken, item, businessName))}>PDF</button>
-                <button className="chip" disabled={busy} onClick={() => void run(item, () => downloadStoredReportCsv(idToken, item))}>CSV</button>
+                <button className="chip" disabled={busy} onClick={() => void run(item, (signal) => openStoredReportPdf(idToken, item, businessName, signal))}>PDF</button>
+                <button className="chip" disabled={busy} onClick={() => void run(item, (signal) => downloadStoredReportCsv(idToken, item, signal))}>CSV</button>
                 <button className="chip" disabled={busy} aria-label={`Borrar ${item.title}`} onClick={() => { if (window.confirm(`¿Borrar el reporte "${item.title}"?`)) void run(item, () => onDelete(item.reportId)); }}>Borrar</button>
               </div>
             </div>

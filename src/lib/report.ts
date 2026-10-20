@@ -2,7 +2,6 @@ import type { ApiReport, ApiReportSection } from "../api/client";
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-const MONEY_FIELDS = new Set(["total", "subtotal", "discount", "tip", "tax", "unitPrice"]);
 const FIELD_LABELS: Record<string, string> = {
   total: "Ventas",
   subtotal: "Ventas por producto",
@@ -15,18 +14,21 @@ const FIELD_LABELS: Record<string, string> = {
 };
 const AGG_LABELS: Record<string, string> = { sum: "Suma", avg: "Promedio", max: "Máximo", min: "Mínimo", count: "Cantidad" };
 
-function fmtValue(field: string, value: number): string {
-  const isMoney = MONEY_FIELDS.has(field);
-  const text = Math.abs(value).toLocaleString("es-CO", { maximumFractionDigits: isMoney ? 0 : 2 });
-  return `${value < 0 ? "-" : ""}${isMoney ? "$" : ""}${text}`;
+function fmtValue(_field: string, value: number | null): string {
+  if (value === null || !Number.isFinite(value)) return "Sin datos";
+  // La moneda depende del negocio; no inferirla a partir del idioma.
+  return value.toLocaleString("es-CO", { maximumFractionDigits: 2 });
 }
 
-function fmtCompact(v: number, field: string): string {
-  const prefix = MONEY_FIELDS.has(field) ? "$" : "";
-  if (v >= 1_000_000) return `${prefix}${(v / 1_000_000).toLocaleString("es-CO", { maximumFractionDigits: 1 })} M`;
-  if (v >= 1_000) return `${prefix}${(v / 1_000).toLocaleString("es-CO", { maximumFractionDigits: 0 })} mil`;
-  return `${prefix}${v.toLocaleString("es-CO", { maximumFractionDigits: 0 })}`;
+function fmtCompact(v: number, _field: string): string {
+  if (Math.abs(v) >= 1_000_000) return `${(v / 1_000_000).toLocaleString("es-CO", { maximumFractionDigits: 1 })} M`;
+  if (Math.abs(v) >= 1_000) return `${(v / 1_000).toLocaleString("es-CO", { maximumFractionDigits: 0 })} mil`;
+  return v.toLocaleString("es-CO", { maximumFractionDigits: 2 });
 }
+
+type DataPoint = ApiReportSection["data"][number];
+type NumericPoint = DataPoint & { value: number };
+const hasValue = (row: DataPoint): row is NumericPoint => row.value !== null && Number.isFinite(row.value);
 
 function metricLabel(s: ApiReportSection): string {
   // event_count ya es un conteo de tickets: "Cantidad · Tickets" sería redundante.
@@ -53,7 +55,8 @@ export function reportToCsv(report: ApiReport): string {
   for (const section of report.sections) {
     lines.push(csvCell(section.heading));
     lines.push([csvCell(section.groupBy ?? "Concepto"), csvCell(metricLabel(section))].join(";"));
-    for (const row of section.data) lines.push([csvCell(row.label ?? "Total"), csvCell(row.value)].join(";"));
+    for (const row of section.data) lines.push([csvCell(row.label ?? "Total"), csvCell(hasValue(row) ? row.value : "Sin datos")].join(";"));
+    if (section.data.length === 0) lines.push("Total;Sin datos");
     lines.push("");
   }
   // BOM para que Excel abra bien las tildes.
@@ -70,10 +73,12 @@ export function downloadReportCsv(report: ApiReport) {
 }
 
 function kpiCard(s: ApiReportSection): string {
-  const value = s.data[0]?.value ?? 0;
+  const value = s.data[0]?.value ?? null;
   let delta = "";
-  if (s.previous !== undefined) {
-    if (s.previous === 0) {
+  if (value !== null && Number.isFinite(value) && s.previous !== undefined) {
+    if (s.previous === null || !Number.isFinite(s.previous)) {
+      delta = `<div class="delta flat">Sin datos del periodo anterior</div>`;
+    } else if (s.previous === 0) {
       delta = `<div class="delta flat">Sin base de comparación</div>`;
     } else {
       const pct = ((value - s.previous) / Math.abs(s.previous)) * 100;
@@ -87,49 +92,66 @@ function kpiCard(s: ApiReportSection): string {
 
 /** Barras verticales por día con rejilla; las etiquetas del eje X se reparten para no encimarse. */
 function trendChart(s: ApiReportSection): string {
-  const data = s.data;
+  const data = s.data.filter(hasValue);
   if (data.length === 0) return `<p class="empty">Sin datos en este periodo.</p>`;
   const W = 680, H = 220, L = 56, R = 8, T = 10, B = 28;
   const max = Math.max(...data.map((d) => d.value), 1);
+  const min = Math.min(...data.map((d) => d.value), 0);
   const plotW = W - L - R, plotH = H - T - B;
   const slot = plotW / data.length;
   const barW = Math.max(2, Math.min(28, slot * 0.7));
   const grid = [0, 0.25, 0.5, 0.75, 1]
     .map((f) => {
       const y = T + plotH - plotH * f;
-      return `<line x1="${L}" x2="${W - R}" y1="${y}" y2="${y}" class="grid"/><text x="${L - 6}" y="${y + 3}" class="axis" text-anchor="end">${esc(fmtCompact(max * f, s.field))}</text>`;
+      return `<line x1="${L}" x2="${W - R}" y1="${y}" y2="${y}" class="grid"/><text x="${L - 6}" y="${y + 3}" class="axis" text-anchor="end">${esc(fmtCompact(min + (max - min) * f, s.field))}</text>`;
     })
     .join("");
   const step = Math.ceil(data.length / 10);
   const peak = data.reduce((best, d, i) => (d.value > data[best].value ? i : best), 0);
   const bars = data
     .map((d, i) => {
-      const h = (d.value / max) * plotH;
+      const h = (Math.abs(d.value) / (max - min)) * plotH;
+      const y = T + ((max - Math.max(d.value, 0)) / (max - min)) * plotH;
       const x = L + slot * i + (slot - barW) / 2;
       const label = i % step === 0 ? `<text x="${x + barW / 2}" y="${H - 8}" class="axis" text-anchor="middle">${esc((d.label ?? "").slice(5))}</text>` : "";
-      return `<rect x="${x}" y="${T + plotH - h}" width="${barW}" height="${h}" rx="2" class="${i === peak ? "bar peak" : "bar"}"><title>${esc(d.label ?? "")}: ${esc(fmtValue(s.field, d.value))}</title></rect>${label}`;
+      return `<rect x="${x}" y="${y}" width="${barW}" height="${h}" rx="2" class="${i === peak ? "bar peak" : "bar"}"><title>${esc(d.label ?? "")}: ${esc(fmtValue(s.field, d.value))}</title></rect>${label}`;
     })
     .join("");
   return `<svg viewBox="0 0 ${W} ${H}" class="chart" role="img" aria-label="${esc(s.heading)}">${grid}${bars}</svg><div class="note">El día más alto se resalta: ${esc(data[peak].label ?? "")} (${esc(fmtValue(s.field, data[peak].value))}).</div>`;
 }
 
-/** Top 8 con barras horizontales y el resto agrupado en "Otros". */
+function remainingValue(s: ApiReportSection, rows: NumericPoint[]): number | null {
+  // Un ticket puede contener varios productos: sus conteos no se suman.
+  if (s.field === "event_count" && s.groupBy === "description") return null;
+  if (s.field === "event_count" || s.aggregation === "sum" || s.aggregation === "count") return rows.reduce((sum, row) => sum + row.value, 0);
+  if (s.aggregation === "max") return Math.max(...rows.map((row) => row.value));
+  if (s.aggregation === "min") return Math.min(...rows.map((row) => row.value));
+  if (s.aggregation !== "avg") return null;
+  if (rows.length === 1) return rows[0].value;
+  if (rows.some((row) => !Number.isFinite(row.sampleCount) || row.sampleCount! <= 0)) return null;
+  const count = rows.reduce((sum, row) => sum + row.sampleCount!, 0);
+  return rows.reduce((sum, row) => sum + row.value * row.sampleCount!, 0) / count;
+}
+
+/** Top 8; combina el resto solo si se puede conservar su agregación. */
 function rankingChart(s: ApiReportSection): string {
-  const sorted = [...s.data].sort((a, b) => b.value - a.value);
+  const sorted = s.data.filter(hasValue).sort((a, b) => b.value - a.value);
   if (sorted.length === 0) return `<p class="empty">Sin datos en este periodo.</p>`;
   const TOP = 8;
   const top = sorted.slice(0, TOP);
   const rest = sorted.slice(TOP);
-  const rows = rest.length ? [...top, { label: `Otros (${rest.length})`, value: rest.reduce((a, d) => a + d.value, 0) }] : top;
-  const max = Math.max(...rows.map((r) => r.value), 1);
+  const remaining = rest.length ? remainingValue(s, rest) : null;
+  const rows = remaining === null ? top : [...top, { label: `Otros (${rest.length})`, value: remaining }];
+  const max = Math.max(...rows.map((r) => Math.abs(r.value)), 1);
   const total = sorted.reduce((a, d) => a + d.value, 0);
-  const canShare = s.aggregation === "sum" && total > 0;
+  const canShare = s.field !== "event_count" && s.aggregation === "sum" && total > 0 && sorted.every((row) => row.value >= 0);
+  const note = rest.length && remaining === null ? `<div class="note">Se muestran las primeras ${TOP} categorías. El resto se detalla en el anexo.</div>` : "";
   return `<div class="rank">${rows
     .map(
       (r) =>
-        `<div class="rank-row"><div class="rank-name">${esc(r.label ?? "")}</div><div class="rank-track"><div class="rank-fill" style="width:${((r.value / max) * 100).toFixed(1)}%"></div></div><div class="rank-val">${esc(fmtValue(s.field, r.value))}${canShare ? `<span>${Math.round((r.value / total) * 100)} %</span>` : ""}</div></div>`,
+        `<div class="rank-row"><div class="rank-name">${esc(r.label ?? "")}</div><div class="rank-track"><div class="rank-fill" style="width:${((Math.abs(r.value) / max) * 100).toFixed(1)}%"></div></div><div class="rank-val">${esc(fmtValue(s.field, r.value))}${canShare ? `<span>${Math.round((r.value / total) * 100)} %</span>` : ""}</div></div>`,
     )
-    .join("")}</div>`;
+    .join("")}</div>${note}`;
 }
 
 function annexTable(s: ApiReportSection): string {

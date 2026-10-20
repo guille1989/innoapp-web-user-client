@@ -17,7 +17,7 @@ import type { ApiAgent, ApiTicket, ApiWidget } from "./api/client";
 import type { BusinessEvent, Robot, Widget } from "./types";
 
 type ActiveSheet = "ai" | "builder" | null;
-const VALID_FIELDS = new Set<Widget["field"]>(["event_count", "quantity", "unitPrice", "subtotal", "discount", "tip", "total"]);
+const VALID_FIELDS = new Set<Widget["field"]>(["event_count", "quantity", "unitPrice", "subtotal", "discount", "tip", "tax", "total"]);
 const VALID_GROUPS = new Set<NonNullable<Widget["group"]>>(["port", "agent", "status", "parsedBy", "description", "day", "hour"]);
 
 function toEvent(ticket: ApiTicket): BusinessEvent {
@@ -31,7 +31,7 @@ function toEvent(ticket: ApiTicket): BusinessEvent {
     eventType: "venta",
     meta: { label: ticket.status, color: "var(--teal)", bg: "var(--teal-dim)" },
     monto: ticket.total ?? 0,
-    items: ticket.items?.reduce((sum, item) => sum + (item.quantity ?? 0), 0) ?? 0,
+    items: ticket.items?.filter((item) => !item.voided).reduce((sum, item) => sum + (item.quantity ?? 0), 0) ?? 0,
     metodoPago: "Sin dato",
   };
 }
@@ -61,7 +61,7 @@ export function AuthenticatedApp() {
   const onboarding = useOnboarding(idToken!);
   const reports = useReports(idToken!);
   const onboardingAct = onboarding.act;
-  const events = useMemo(() => cloud.tickets.map(toEvent).sort((a, b) => a.ts - b.ts), [cloud.tickets]);
+  const events = useMemo(() => cloud.tickets.filter((ticket) => ticket.status === "parsed" && Number.isFinite(Date.parse(ticket.capturedAt))).map(toEvent).sort((a, b) => a.ts - b.ts), [cloud.tickets]);
   const robots = useMemo(() => cloud.agents.map(toRobot), [cloud.agents]);
   const widgets = useMemo(() => {
     // Al agrupar por agente el backend devuelve el agentId (un UUID) y "(sin dato)" para los tickets sin
@@ -78,10 +78,16 @@ export function AuthenticatedApp() {
         agg: w.metric.aggregation,
         group,
         keyLabels: group === "agent" ? agentLabels : undefined,
-        data: cloud.widgetData[w.widgetId]?.map((row) => ({ key: row.label ?? "total", value: row.value })) ?? [],
+        data: cloud.widgetData[w.widgetId]?.flatMap((row) => row.value === null ? [] : [{ key: row.label ?? "total", value: row.value, sampleCount: row.sampleCount }]) ?? [],
+        dataStatus: cloud.widgetStates[w.widgetId]?.status ?? "loading",
+        dataError: cloud.widgetStates[w.widgetId]?.error,
+        updatedAt: cloud.widgetStates[w.widgetId]?.updatedAt,
+        dataLabel: w.filters?.status && w.filters.status !== "parsed"
+          ? "estado: " + w.filters.status
+          : group === "status" || group === "parsedBy" ? "datos de diagnóstico" : "datos confirmados",
       };
     });
-  }, [cloud.widgets, cloud.widgetData, cloud.agents]);
+  }, [cloud.widgets, cloud.widgetData, cloud.widgetStates, cloud.agents]);
   const latestEventId = events.at(-1)?.id ?? null;
   const connected = cloud.agents.length > 0;
 
@@ -97,12 +103,12 @@ export function AuthenticatedApp() {
 
   const finishTour = useCallback(() => {
     if (onboarding.me?.onboarding && !onboarding.me.onboarding.productTourCompletedAt) {
-      void onboardingAct("complete-product-tour");
+      void onboardingAct("complete-product-tour").catch(() => {});
     }
   }, [onboarding.me?.onboarding, onboardingAct]);
 
-  function addWidget(cfg: Omit<Widget, "id">) {
-    void cloud.createWidget({
+  async function addWidget(cfg: Omit<Widget, "id">) {
+    await cloud.createWidget({
       name: cfg.title,
       visualization: cfg.type,
       metric: { field: cfg.field, aggregation: cfg.field === "event_count" ? "count" : cfg.agg },
@@ -142,11 +148,11 @@ export function AuthenticatedApp() {
             {cloud.error && <button onClick={() => void cloud.refresh()}>Reintentar</button>}
           </div>
         )}
-        <DashboardView active={view === "dashboard"} widgets={widgets} events={events} onRemoveWidget={(id) => void cloud.deleteWidget(id)} onOpenBuilder={() => setActiveSheet("builder")} reports={reports.reports} idToken={idToken!} businessName={onboarding.me?.businessName ?? ""} onDeleteReport={reports.remove} />
+        <DashboardView active={view === "dashboard"} widgets={widgets} events={events} onRemoveWidget={(id) => { void cloud.deleteWidget(id).catch(() => {}); }} onOpenBuilder={() => setActiveSheet("builder")} reports={reports.reports} idToken={idToken!} businessName={onboarding.me?.businessName ?? ""} onDeleteReport={reports.remove} />
         <RobotsView active={view === "robots"} events={events} latestEventId={latestEventId} robots={robots} codes={cloud.codes} tickets={cloud.tickets} idToken={idToken!} onUpdateLocation={cloud.updateAgentLocation} onReviewTicket={cloud.reviewTicket} />
       </main>
       <Overlay open={activeSheet !== null} onClick={() => setActiveSheet(null)} />
-      <AiSheet open={activeSheet === "ai"} onOpen={() => setActiveSheet("ai")} onClose={() => setActiveSheet(null)} events={events} onCreateWidget={addWidget} idToken={idToken!} businessName={onboarding.me?.businessName ?? ""} onReportSaved={() => void reports.refresh()} />
+      <AiSheet open={activeSheet === "ai"} onOpen={() => setActiveSheet("ai")} onClose={() => setActiveSheet(null)} onCreateWidget={addWidget} idToken={idToken!} businessName={onboarding.me?.businessName ?? ""} onReportSaved={() => void reports.refresh()} />
       <WidgetBuilderSheet open={activeSheet === "builder"} onClose={() => setActiveSheet(null)} onCreate={addWidget} />
       {onboardingState && !onboardingState.completedAt && (
         <OnboardingReminder connected={connected} hasTickets={cloud.tickets.length > 0} hasWidgets={cloud.widgets.length > 0} onContinue={() => setShowOnboarding(true)} />

@@ -1,7 +1,5 @@
-import { fmtAmount } from "../data/format";
 import { FIELD_LABELS, GROUP_LABELS } from "../data/widgetLabels";
-import { topGroup } from "./aggregate";
-import type { Aggregation, AggregatableField, BusinessEvent, GroupField, Widget, WidgetType } from "../types";
+import type { Aggregation, AggregatableField, GroupField, Widget, WidgetType } from "../types";
 
 export type WidgetIntent = Omit<Widget, "id">;
 
@@ -70,7 +68,7 @@ export function parseWidgetIntent(q: string, previous?: string): WidgetIntent | 
   return { type, field, agg, group, title };
 }
 
-export type AiResponse = { kind: "widget"; cfg: WidgetIntent } | { kind: "text"; text: React.ReactNode };
+export type AiResponse = { kind: "widget"; cfg: WidgetIntent };
 
 /**
  * Intentos locales, gratis e instantáneos (sin red) — solo los patrones que
@@ -79,26 +77,12 @@ export type AiResponse = { kind: "widget"; cfg: WidgetIntent } | { kind: "text";
  * en vez de responder con un catch-all genérico (eso ahora lo resuelve el
  * modelo, que sí puede consultar los datos reales — ver PROYECTO.md sección 13).
  */
-export function respondLocally(question: string, events: BusinessEvent[], previousQuestion?: string): AiResponse | null {
+export function respondLocally(question: string, previousQuestion?: string): AiResponse | null {
   const q = question.toLowerCase();
 
   const widgetCfg = parseWidgetIntent(q, previousQuestion);
   if (widgetCfg) {
     return { kind: "widget", cfg: widgetCfg };
-  }
-
-  if ((q.includes("robot") || q.includes("puerto")) && (q.includes("más") || q.includes("mas") || q.includes("vendió") || q.includes("vendio"))) {
-    const t = topGroup(events, "total", "sum", "port");
-    if (!t) return { kind: "text" as const, text: "Aún no tengo suficientes lecturas." };
-    return {
-      kind: "text" as const,
-      text: (
-        <>
-          El periférico con más ventas es <span className="mono-inline">{t.key}</span>, con {fmtAmount(t.value)}{" "}
-          acumulados.
-        </>
-      ),
-    };
   }
 
   return null;

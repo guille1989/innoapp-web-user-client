@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { localDateKey } from "../lib/chartScale";
-import { api, type AgentLocation, type ApiActivationCode, type ApiAgent, type ApiTicket, type ApiWidget, type ApiWidgetData } from "../api/client";
+import { api, type AgentLocation, type ApiActivationCode, type ApiAgent, type ApiTicket, type ApiWidget } from "../api/client";
+import { widgetDataFailure, widgetDataSuccess, type WidgetDataState } from "../lib/widgetDataState";
+import { useRequestScope } from "./useRequestScope";
 
 // Cada tick re-ejecuta una query de Athena por widget en el dashboard —
 // no es gratis (ver PROYECTO.md sección 10.1: un intervalo agresivo sin
@@ -23,11 +25,12 @@ function mergeAgentsKeepingNewest(current: ApiAgent[], incoming: ApiAgent[]): Ap
 }
 
 export function useCloudData(idToken: string) {
+  const scope = useRequestScope(idToken);
   const [tickets, setTickets] = useState<ApiTicket[]>([]);
   const [agents, setAgents] = useState<ApiAgent[]>([]);
   const [codes, setCodes] = useState<ApiActivationCode[]>([]);
   const [widgets, setWidgets] = useState<ApiWidget[]>([]);
-  const [widgetData, setWidgetData] = useState<Record<string, ApiWidgetData>>({});
+  const [widgetStates, setWidgetStates] = useState<Record<string, WidgetDataState>>({});
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -36,35 +39,66 @@ export function useCloudData(idToken: string) {
   // evita que una respuesta antigua del refresh general tape un heartbeat
   // que acabamos de observar.
   const refreshAgents = useCallback(async () => {
+    const task = scope.start("agents");
     try {
-      const result = await api.agents(idToken);
+      const result = await api.agents(idToken, task.signal);
+      if (!task.isCurrent()) return [];
       setAgents((current) => mergeAgentsKeepingNewest(current, result.agents));
       return result.agents;
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      if (task.isCurrent()) setError(err instanceof Error ? err.message : String(err));
       throw err;
+    } finally {
+      task.finish();
     }
-  }, [idToken]);
+  }, [idToken, scope]);
 
   const refresh = useCallback(async () => {
+    const task = scope.start("refresh");
+    const agentTask = scope.start("agents");
     try {
       const [ticketResult, agentResult, codeResult, widgetResult] = await Promise.all([
-        api.tickets(idToken), api.agents(idToken), api.activationCodes(idToken), api.widgets(idToken),
+        api.tickets(idToken, task.signal),
+        api.agents(idToken, AbortSignal.any([task.signal, agentTask.signal])).catch((err) => {
+          if (!agentTask.isCurrent()) return null;
+          throw err;
+        }),
+        api.activationCodes(idToken, task.signal), api.widgets(idToken, task.signal),
       ]);
-      const dataResults = await Promise.allSettled(widgetResult.widgets.map(async (w) => [w.widgetId, (await api.widgetData(idToken, w.widgetId, w.groupBy === "hour" ? HOURLY_RANGE() : undefined)).data] as const));
-      const dataEntries = dataResults.flatMap((result) => result.status === "fulfilled" ? [result.value] : []);
+      if (!task.isCurrent()) return;
       setTickets(ticketResult.tickets);
-      setAgents((current) => mergeAgentsKeepingNewest(current, agentResult.agents));
+      if (agentTask.isCurrent() && agentResult) setAgents((current) => mergeAgentsKeepingNewest(current, agentResult.agents));
+      agentTask.finish();
       setCodes(codeResult.codes);
       setWidgets(widgetResult.widgets);
-      setWidgetData(Object.fromEntries(dataEntries));
+      setWidgetStates((previous) => Object.fromEntries(widgetResult.widgets.map((w) => [
+        w.widgetId, previous[w.widgetId] ?? { data: [], status: "loading" as const },
+      ])));
+      const dataResults = await Promise.allSettled(widgetResult.widgets.map(async (w) =>
+        (await api.widgetData(idToken, w.widgetId, w.groupBy === "hour" ? HOURLY_RANGE() : undefined, task.signal)).data));
+      if (!task.isCurrent()) return;
+      setWidgetStates((previous) => Object.fromEntries(widgetResult.widgets.map((w, index) => {
+        const result = dataResults[index];
+        return [w.widgetId, result.status === "fulfilled"
+          ? widgetDataSuccess(result.value)
+          : widgetDataFailure(previous[w.widgetId], result.reason instanceof Error ? result.reason.message : "No se pudo consultar este widget")];
+      })));
       setError(dataResults.some((result) => result.status === "rejected") ? "No se pudieron actualizar los datos de uno o más widgets" : null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      if (task.isCurrent()) {
+        const message = err instanceof Error ? err.message : String(err);
+        setError(message);
+        setWidgetStates((previous) => Object.fromEntries(Object.entries(previous).map(([id, state]) => [id, widgetDataFailure(state, message)])));
+      }
     } finally {
-      setLoading(false);
+      if (task.isCurrent()) setLoading(false);
+      agentTask.finish();
+      task.finish();
     }
-  }, [idToken]);
+  }, [idToken, scope]);
+
+  const latestRefresh = useRef(refresh);
+  useEffect(() => { latestRefresh.current = refresh; }, [refresh]);
 
   useEffect(() => {
     void refresh();
@@ -81,42 +115,31 @@ export function useCloudData(idToken: string) {
     };
   }, [refresh]);
 
-  const createWidget = useCallback(async (body: Omit<ApiWidget, "widgetId" | "createdAt">) => {
+  const mutate = useCallback(async (key: string, action: (signal: AbortSignal) => Promise<unknown>) => {
+    const task = scope.start(key);
     try {
-      await api.createWidget(idToken, body);
-      await refresh();
+      await action(task.signal);
+      if (!task.isCurrent()) throw new DOMException("La sesión cambió", "AbortError");
+      await latestRefresh.current();
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    }
-  }, [idToken, refresh]);
-  const deleteWidget = useCallback(async (id: string) => {
-    try {
-      await api.deleteWidget(idToken, id);
-      await refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    }
-  }, [idToken, refresh]);
-
-  const updateAgentLocation = useCallback(async (id: string, location: AgentLocation) => {
-    try {
-      await api.updateAgentLocation(idToken, id, location);
-      await refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      if (task.isCurrent()) setError(err instanceof Error ? err.message : String(err));
       throw err;
+    } finally {
+      task.finish();
     }
-  }, [idToken, refresh]);
+  }, [scope]);
 
-  const reviewTicket = useCallback(async (ticketId: string, capturedAt: string, action: "confirm" | "discard") => {
-    try {
-      await api.reviewTicket(idToken, ticketId, capturedAt, action);
-      await refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-      throw err;
-    }
-  }, [idToken, refresh]);
+  const createWidget = useCallback((body: Omit<ApiWidget, "widgetId" | "createdAt">) =>
+    mutate("create-widget", (signal) => api.createWidget(idToken, body, signal)), [idToken, mutate]);
+  const deleteWidget = useCallback((id: string) =>
+    mutate("delete-widget:" + id, (signal) => api.deleteWidget(idToken, id, signal)), [idToken, mutate]);
 
-  return { tickets, agents, codes, widgets, widgetData, error, loading, refresh, refreshAgents, createWidget, deleteWidget, updateAgentLocation, reviewTicket };
+  const updateAgentLocation = useCallback((id: string, location: AgentLocation) =>
+    mutate("location:" + id, (signal) => api.updateAgentLocation(idToken, id, location, signal)), [idToken, mutate]);
+
+  const reviewTicket = useCallback((ticketId: string, capturedAt: string, action: "confirm" | "discard") =>
+    mutate("review:" + ticketId, (signal) => api.reviewTicket(idToken, ticketId, capturedAt, action, signal)), [idToken, mutate]);
+
+  const widgetData = useMemo(() => Object.fromEntries(Object.entries(widgetStates).map(([id, state]) => [id, state.data])), [widgetStates]);
+  return { tickets, agents, codes, widgets, widgetData, widgetStates, error, loading, refresh, refreshAgents, createWidget, deleteWidget, updateAgentLocation, reviewTicket };
 }

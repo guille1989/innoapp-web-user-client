@@ -5,7 +5,7 @@ import { SignupScreen } from "./components/auth/SignupScreen";
 import { AuthenticatedApp } from "./AuthenticatedApp";
 
 function App() {
-  const { status } = useAuth();
+  const { status, sessionKey } = useAuth();
   const [authMode, setAuthMode] = useState<"login" | "signup">("login");
 
   if (status === "loading") {
@@ -23,7 +23,7 @@ function App() {
       : <SignupScreen onSwitchToLogin={() => setAuthMode("login")} />;
   }
 
-  return <AuthenticatedApp />;
+  return <AuthenticatedApp key={sessionKey} />;
 }
 
 export default App;

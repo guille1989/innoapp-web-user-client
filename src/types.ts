@@ -36,7 +36,7 @@ export interface AperturaCajaEvent extends BusinessEventBase {
 
 export type BusinessEvent = VentaEvent | DevolucionEvent | AperturaCajaEvent;
 
-export type AggregatableField = "event_count" | "quantity" | "unitPrice" | "subtotal" | "discount" | "tip" | "total";
+export type AggregatableField = "event_count" | "quantity" | "unitPrice" | "subtotal" | "discount" | "tip" | "tax" | "total";
 export type Aggregation = "sum" | "avg" | "max" | "min" | "count";
 export type GroupField = "port" | "agent" | "status" | "parsedBy" | "description" | "day" | "hour";
 
@@ -50,6 +50,10 @@ export interface Widget {
   agg: Aggregation;
   group: GroupField | null;
   data?: AggregateRow[];
+  dataStatus?: "loading" | "ready" | "error" | "stale";
+  dataError?: string;
+  updatedAt?: string;
+  dataLabel?: string;
   /** Clave del dato → texto a mostrar (ej. agentId → nombre del agente). Sin entrada se muestra la clave. */
   keyLabels?: Record<string, string>;
 }
@@ -57,6 +61,8 @@ export interface Widget {
 export interface AggregateRow {
   key: string;
   value: number;
+  /** Número de observaciones del promedio, después de deduplicar tickets. */
+  sampleCount?: number;
 }
 
 export type RobotStatus = "online" | "warn" | "offline";
