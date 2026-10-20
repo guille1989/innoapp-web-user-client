@@ -173,3 +173,5 @@ button { border: 0; background: none; cursor: pointer; }
 
 /* Selector de tamaño del texto de los widgets (vista de Datos) */
 .text-size { position: fixed; z-index: 50; top: 74px; right: 24px; height: 34px; padding: 0 6px 0 11px; display: flex; align-items: center; gap: 4px; border-radius: 10px; }.text-size>span { margin-right: 4px; color: var(--dim); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; }.text-size button { width: 28px; height: 24px; display: grid; place-items: center; border-radius: 6px; color: var(--muted); font-weight: 700; line-height: 1; }.text-size button:hover { color: var(--text); }.text-size button.active { background: var(--teal-dim); color: var(--teal); box-shadow: inset 0 0 0 1px rgba(140,244,238,.18); }.text-size button:focus-visible { outline: 1px solid var(--teal); }
+/* iOS Safari hace zoom al enfocar un campo con font-size < 16px: en pantallas táctiles los campos del asistente usan 16px. */
+@media (pointer: coarse) { .ai-dock input, .ai-input { font-size: 16px; } .ai-dock input { line-height: 1.3; } }
