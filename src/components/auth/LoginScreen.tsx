@@ -29,7 +29,7 @@ export function LoginScreen({ onSwitchToSignup }: LoginScreenProps) {
   }
 
   return (
-    <main className="login-screen">
+    <main className="login-screen force-dark">
       <section className="login-story" aria-label="Presentación de InnoApp">
         <div className="login-grid" />
         <div className="login-glow login-glow-top" />

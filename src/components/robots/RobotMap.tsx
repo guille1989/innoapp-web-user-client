@@ -6,13 +6,13 @@ import { addBasemap, MAP_MAX_ZOOM } from "./basemap";
 const STATUS_LABEL: Record<RobotStatus, string> = { online: "online", warn: "reintentando", offline: "offline" };
 const STATUS_BG: Record<RobotStatus, string> = {
   online: "var(--teal-dim)",
-  warn: "var(--amber-dim)",
+  warn: "rgba(var(--amber-rgb),.12)",
   offline: "rgba(140,147,163,.15)",
 };
 const STATUS_FG: Record<RobotStatus, string> = {
   online: "var(--teal)",
   warn: "var(--amber)",
-  offline: "var(--text-dim)",
+  offline: "var(--muted)",
 };
 
 interface RobotMapProps {

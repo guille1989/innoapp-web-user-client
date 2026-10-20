@@ -93,7 +93,7 @@ export function OnboardingFlow({ businessName, state, agents, codes, tickets, wi
   }
 
   return (
-    <main className="onboarding-shell">
+    <main className="onboarding-shell force-dark">
       <div className="onboarding-grid" />
       <header className="onboarding-header">
         <div className="onboarding-brand"><img src="/brand/innoapp-mark.png" alt="" /><strong>Inno<span>App</span></strong></div>

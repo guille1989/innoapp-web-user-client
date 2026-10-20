@@ -6,6 +6,19 @@
     <link rel="apple-touch-icon" href="/brand/innoapp-mark.png?v=2" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0D1117" />
+    <script>
+      // Aplica el tema guardado antes del primer render (evita el destello oscuro). Misma lógica que src/lib/theme.ts.
+      (function () {
+        try {
+          var pref = localStorage.getItem("innoapp.theme.v1");
+          var light = pref === "light" || (pref !== "dark" && window.matchMedia("(prefers-color-scheme: light)").matches);
+          var theme = light ? "light" : "dark";
+          document.documentElement.dataset.theme = theme;
+          document.documentElement.style.colorScheme = theme;
+          document.querySelector('meta[name="theme-color"]').setAttribute("content", light ? "#F4F6F9" : "#0D1117");
+        } catch (e) {}
+      })();
+    </script>
     <title>Panel del negocio · InnoApp</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

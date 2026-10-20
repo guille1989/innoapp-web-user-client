@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../auth/AuthContext";
+import { THEME_LABELS, THEME_PREFERENCES, useTheme } from "../lib/theme";
 import type { AppView } from "./BottomNav";
 
 interface TopBarProps {
@@ -12,6 +13,7 @@ export function TopBar({ active, onChange, onOpenGuide }: TopBarProps) {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const [themePreference, , setThemePreference] = useTheme();
   const email = user?.email ?? "Usuario InnoApp";
   const initials = email.slice(0, 2).toUpperCase();
 
@@ -38,6 +40,14 @@ export function TopBar({ active, onChange, onOpenGuide }: TopBarProps) {
         {open && (
           <div className="user-popover glass" role="menu">
             <div className="user-identity"><strong>{email}</strong><span>Sesión segura</span></div>
+            <div className="theme-switch" role="group" aria-label="Tema de la interfaz">
+              <span>Tema</span>
+              <div>
+                {THEME_PREFERENCES.map((item) => (
+                  <button key={item} type="button" className={themePreference === item ? "active" : ""} aria-pressed={themePreference === item} onClick={() => setThemePreference(item)}>{THEME_LABELS[item]}</button>
+                ))}
+              </div>
+            </div>
             <button role="menuitem" onClick={() => { setOpen(false); onOpenGuide(); }}>Guía de la aplicación <span>?</span></button>
             <button role="menuitem" onClick={logout}>Cerrar sesión <span>↗</span></button>
           </div>

@@ -31,7 +31,10 @@ export const GROUP_LABELS: Record<GroupField, string> = {
 
 /**
  * Colores por categoría (dona). Validados contra el fondo de los widgets
- * (#111318) con el validador del skill dataviz: misma luminosidad, croma
+ * en dark (#111318) y en light (#ffffff, --chart-surface) con el validador del
+ * skill dataviz — los mismos hex pasan en ambos temas; en light el contraste
+ * mínimo es 3.07:1 (#c98500), apenas sobre el piso de 3:1, así que no se deben
+ * aclarar. Misma luminosidad, croma
  * suficiente y separables con daltonismo (protan/deutan) entre vecinos en
  * ESTE orden, incluido el cierre del anillo último→primero. Reordenarlos o
  * agregar uno rompe esa garantía — se revalida antes. No incluye rojo: ese
