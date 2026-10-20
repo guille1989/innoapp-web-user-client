@@ -3,7 +3,6 @@ import { WidgetCard } from "./WidgetCard";
 import { ReportsWidgetCard } from "./ReportsWidgetCard";
 import type { ApiReportListItem } from "../../api/client";
 import { IconPlus } from "../icons";
-import { TextSizeControl } from "./TextSizeControl";
 import { FONT_SCALES, useFontLevel, WidgetFontScaleProvider } from "./fontScale";
 import type { BusinessEvent, Widget } from "../../types";
 
@@ -42,7 +41,7 @@ function defaultLayout(index: number, type: Widget["type"]): WidgetLayout {
 export function DashboardView({ active, widgets, events, onRemoveWidget, onOpenBuilder, reports, idToken, businessName, onDeleteReport, hasMoreReports, loadingMoreReports, onLoadMoreReports }: DashboardViewProps) {
   const [layout, setLayout] = useState<LayoutMap>(loadLayout);
   const [selected, setSelected] = useState<string | null>(null);
-  const [fontLevel, setFontLevel] = useFontLevel();
+  const [fontLevel] = useFontLevel();
   const fontScale = FONT_SCALES[fontLevel];
   const hasReports = reports.length > 0;
   const interaction = useRef<Interaction | null>(null);
@@ -95,9 +94,6 @@ export function DashboardView({ active, widgets, events, onRemoveWidget, onOpenB
       <div className="canvas-grid" />
       <div className="canvas-vignette" />
       <div className="canvas-intro"><span>Espacio de datos</span><strong>{widgets.length} {widgets.length === 1 ? "widget" : "widgets"}</strong></div>
-      {active && (
-        <TextSizeControl className="glass" level={fontLevel} onChange={setFontLevel} label="Tamaño del texto de la vista" />
-      )}
       <WidgetFontScaleProvider value={fontScale}>
       <div className="canvas-widgets" style={{ "--wfs": fontScale } as React.CSSProperties}>
         {widgets.map((widget, index) => {
