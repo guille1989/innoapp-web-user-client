@@ -6,9 +6,12 @@ import { fmtAxis, isAdditive, metricLabel, RANGE_LABELS, resolveRange, type Rang
 import { ChartTooltip } from "./ChartTooltip";
 import { RangePanel, RangePicker, type RangeView } from "./RangeControls";
 import { useElementSize } from "./useElementSize";
+import { useWidgetFontScale } from "../fontScale";
 import type { Widget } from "../../../types";
 
+// Alto de fila a escala 1; el CSS (.bar-row) lo multiplica por --wfs igual que acá.
 const ROW_HEIGHT = 26;
+const VALUE_COLUMN = 46;
 
 // Igual que en LineChart, el rango es una preferencia de quien mira y vive en
 // localStorage. A diferencia de las líneas (que reciben datos diarios y filtran
@@ -49,6 +52,8 @@ type Row = { key: string; value: number };
  */
 export function BarChart({ widget: w }: { widget: Widget }) {
   const { idToken } = useAuth();
+  const scale = useWidgetFontScale();
+  const rowHeight = ROW_HEIGHT * scale;
   const [view, setView] = useState(() => loadView(w.id));
   const [editingRange, setEditingRange] = useState(false);
   const [ranged, setRanged] = useState<{ id: string; rows: Row[] } | null>(null);
@@ -105,7 +110,7 @@ export function BarChart({ widget: w }: { widget: Widget }) {
   const total = rows.reduce((sum, row) => sum + row.value, 0);
   const active = hover && hover.index < rows.length ? hover.index : null;
   const activeRow = active !== null ? rows[active] : undefined;
-  const activeTop = active !== null ? active * ROW_HEIGHT - scrollTop : 0;
+  const activeTop = active !== null ? active * rowHeight - scrollTop : 0;
   const pointerX = (e: React.PointerEvent<HTMLElement>, list: Element | null) => e.clientX - (list?.getBoundingClientRect().left ?? 0);
 
   if (rows.length === 0) {
@@ -142,7 +147,7 @@ export function BarChart({ widget: w }: { widget: Widget }) {
               >
                 <span className="bar-row-label">{w.keyLabels?.[row.key] ?? row.key}</span>
                 <span className="bar-row-track">
-                  <i style={{ width: `calc((100% - 46px) * ${ratio.toFixed(4)})` }} />
+                  <i style={{ width: `calc((100% - ${VALUE_COLUMN * scale}px) * ${ratio.toFixed(4)})` }} />
                   <b>{fmtAxis(row.value)}</b>
                 </span>
               </div>
@@ -152,8 +157,8 @@ export function BarChart({ widget: w }: { widget: Widget }) {
         {activeRow && hover && active !== null && size.height > 0 && (
           <ChartTooltip
             x={hover.x}
-            y={activeTop + ROW_HEIGHT / 2}
-            avoid={{ top: activeTop, bottom: activeTop + ROW_HEIGHT }}
+            y={activeTop + rowHeight / 2}
+            avoid={{ top: activeTop, bottom: activeTop + rowHeight }}
             containerWidth={size.width}
             containerHeight={size.height}
             value={formatWidgetValue(w.field, activeRow.value)}

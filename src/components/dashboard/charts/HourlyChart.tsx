@@ -3,6 +3,7 @@ import { formatWidgetValue } from "../../../lib/aggregate";
 import { fmtAxis, isAdditive, localDateKey, metricLabel, niceTicks } from "../../../lib/chartScale";
 import { ChartTooltip } from "./ChartTooltip";
 import { useElementSize } from "./useElementSize";
+import { useWidgetFontScale } from "../fontScale";
 import type { Widget } from "../../../types";
 
 /**
@@ -17,7 +18,7 @@ const DAY_LABELS: Record<Day, string> = { today: "Hoy", yesterday: "Ayer" };
 
 const HOUR_KEY = /^(\d{4}-\d{2}-\d{2}) (\d{2})$/;
 const TICK_CHAR_PX = 6;
-const MARGIN = { top: 18, right: 12, bottom: 20 };
+const BASE_MARGIN = { top: 18, right: 12, bottom: 20 };
 const X_TICK_SPACING = 40;
 const HOUR_TICK_STEPS = [1, 2, 3, 4, 6, 12];
 
@@ -56,6 +57,7 @@ function pickHourTicks(count: number, maxTicks: number): number[] {
 }
 
 export function HourlyChart({ widget: w }: { widget: Widget }) {
+  const scale = useWidgetFontScale();
   const [day, setDay] = useState<Day>("today");
   const [active, setActive] = useState<number | null>(null);
   const [plotRef, size] = useElementSize<HTMLDivElement>();
@@ -93,10 +95,11 @@ export function HourlyChart({ widget: w }: { widget: Widget }) {
   const maxValue = Math.max(0, ...values);
   const minValue = Math.min(0, ...values);
   const integer = w.field === "event_count" || (w.field === "quantity" && w.agg !== "avg");
+  const MARGIN = { top: BASE_MARGIN.top * scale, right: BASE_MARGIN.right, bottom: BASE_MARGIN.bottom * scale };
   const plotHeight = Math.max(12, size.height - MARGIN.top - MARGIN.bottom);
-  const ticks = niceTicks(minValue, maxValue, Math.min(5, Math.max(2, Math.floor(plotHeight / 30))), integer);
+  const ticks = niceTicks(minValue, maxValue, Math.min(5, Math.max(2, Math.floor(plotHeight / (30 * scale)))), integer);
   const tickLabels = ticks.map(fmtAxis);
-  const left = Math.max(...tickLabels.map((label) => label.length)) * TICK_CHAR_PX + 10;
+  const left = Math.max(...tickLabels.map((label) => label.length)) * TICK_CHAR_PX * scale + 10;
   const plotWidth = Math.max(12, size.width - left - MARGIN.right);
   const yMin = ticks[0];
   const yMax = ticks[ticks.length - 1];
@@ -129,10 +132,10 @@ export function HourlyChart({ widget: w }: { widget: Widget }) {
     lastIndex = index;
     if (maxIndex < 0 || point.value > (points[maxIndex].value ?? -Infinity)) maxIndex = index;
   });
-  const showMax = maxIndex >= 0 && maxIndex !== lastIndex && maxValue > 0 && Math.abs(xAt(maxIndex) - xAt(lastIndex)) > 52;
+  const showMax = maxIndex >= 0 && maxIndex !== lastIndex && maxValue > 0 && Math.abs(xAt(maxIndex) - xAt(lastIndex)) > 52 * scale;
   const labelled = [lastIndex, ...(showMax ? [maxIndex] : [])].filter((index) => index >= 0);
 
-  const xTicks = pickHourTicks(points.length, Math.floor(plotWidth / X_TICK_SPACING));
+  const xTicks = pickHourTicks(points.length, Math.floor(plotWidth / (X_TICK_SPACING * scale)));
   const anchorFor = (x: number) => (x < left + 12 ? "start" : x > left + plotWidth - 12 ? "end" : "middle");
 
   function indexAt(clientX: number, element: HTMLElement): number {
@@ -191,7 +194,7 @@ export function HourlyChart({ widget: w }: { widget: Widget }) {
                 </g>
               ))}
               {xTicks.map((index) => (
-                <text key={points[index].hour} className="chart-tick chart-tick-x" x={xAt(index)} y={size.height - 5} textAnchor={anchorFor(xAt(index))}>
+                <text key={points[index].hour} className="chart-tick chart-tick-x" x={xAt(index)} y={size.height - 5 * scale} textAnchor={anchorFor(xAt(index))}>
                   {hourLabel(points[index].hour)}
                 </text>
               ))}
@@ -203,7 +206,7 @@ export function HourlyChart({ widget: w }: { widget: Widget }) {
                 const value = points[index].value ?? 0;
                 const x = xAt(index);
                 const y = yAt(value);
-                const labelY = y - 10 < 10 ? y + 18 : y - 10;
+                const labelY = y - 10 < 10 * scale ? y + 18 * scale : y - 10;
                 return (
                   <g key={`label-${index}`} className={activeIndex !== null ? "line-callout faded" : "line-callout"}>
                     <circle className="line-marker" cx={x} cy={y} r={4} />

@@ -3,6 +3,7 @@ import { WidgetCard } from "./WidgetCard";
 import { ReportsWidgetCard } from "./ReportsWidgetCard";
 import type { ApiReportListItem } from "../../api/client";
 import { IconPlus } from "../icons";
+import { FONT_LEVELS, FONT_LEVEL_LABELS, FONT_SCALES, loadFontLevel, saveFontLevel, WidgetFontScaleProvider, type FontSizeLevel } from "./fontScale";
 import type { BusinessEvent, Widget } from "../../types";
 
 interface DashboardViewProps {
@@ -37,6 +38,8 @@ function defaultLayout(index: number, type: Widget["type"]): WidgetLayout {
 export function DashboardView({ active, widgets, events, onRemoveWidget, onOpenBuilder, reports, idToken, businessName, onDeleteReport }: DashboardViewProps) {
   const [layout, setLayout] = useState<LayoutMap>(loadLayout);
   const [selected, setSelected] = useState<string | null>(null);
+  const [fontLevel, setFontLevel] = useState<FontSizeLevel>(loadFontLevel);
+  const fontScale = FONT_SCALES[fontLevel];
   const hasReports = reports.length > 0;
   const interaction = useRef<Interaction | null>(null);
 
@@ -72,6 +75,11 @@ export function DashboardView({ active, widgets, events, onRemoveWidget, onOpenB
     return () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", stop); window.removeEventListener("pointercancel", stop); };
   }, []);
 
+  function changeFontLevel(level: FontSizeLevel) {
+    setFontLevel(level);
+    saveFontLevel(level);
+  }
+
   function start(kind: Interaction["kind"], id: string, e: React.PointerEvent) {
     if (e.pointerType !== "mouse" && window.innerWidth < 760) return;
     const initial = layout[id];
@@ -88,7 +96,18 @@ export function DashboardView({ active, widgets, events, onRemoveWidget, onOpenB
       <div className="canvas-grid" />
       <div className="canvas-vignette" />
       <div className="canvas-intro"><span>Espacio de datos</span><strong>{widgets.length} {widgets.length === 1 ? "widget" : "widgets"}</strong></div>
-      <div className="canvas-widgets">
+      {active && (
+        <div className="text-size glass" role="group" aria-label="Tamaño del texto de los widgets" onPointerDown={(e) => e.stopPropagation()}>
+          <span>Texto</span>
+          {FONT_LEVELS.map((level, index) => (
+            <button key={level} type="button" className={fontLevel === level ? "active" : ""} aria-pressed={fontLevel === level} aria-label={FONT_LEVEL_LABELS[level]} title={FONT_LEVEL_LABELS[level]} onClick={() => changeFontLevel(level)}>
+              <span style={{ fontSize: 11 + index * 3 }}>A</span>
+            </button>
+          ))}
+        </div>
+      )}
+      <WidgetFontScaleProvider value={fontScale}>
+      <div className="canvas-widgets" style={{ "--wfs": fontScale } as React.CSSProperties}>
         {widgets.map((widget, index) => {
           const box = layout[widget.id] ?? defaultLayout(index, widget.type);
           return (
@@ -103,6 +122,7 @@ export function DashboardView({ active, widgets, events, onRemoveWidget, onOpenB
           </div>
         )}
       </div>
+      </WidgetFontScaleProvider>
       {widgets.length === 0 && !hasReports && <div className="canvas-empty"><div className="empty-icon">＋</div><strong>Tu espacio de datos está vacío</strong><span>Añade un KPI o una gráfica para comenzar.</span><button onClick={onOpenBuilder}>Crear primer widget</button></div>}
       {active && <button data-tour="create-widget" className="fab glass" onClick={onOpenBuilder} aria-label="Agregar widget"><IconPlus /><span>Añadir widget</span></button>}
     </section>
