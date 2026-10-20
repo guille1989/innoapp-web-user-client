@@ -148,8 +148,8 @@ export function AuthenticatedApp() {
             {cloud.error && <button onClick={() => void cloud.refresh()}>Reintentar</button>}
           </div>
         )}
-        <DashboardView active={view === "dashboard"} widgets={widgets} events={events} onRemoveWidget={(id) => { void cloud.deleteWidget(id).catch(() => {}); }} onOpenBuilder={() => setActiveSheet("builder")} reports={reports.reports} idToken={idToken!} businessName={onboarding.me?.businessName ?? ""} onDeleteReport={reports.remove} />
-        <RobotsView active={view === "robots"} events={events} latestEventId={latestEventId} robots={robots} codes={cloud.codes} tickets={cloud.tickets} idToken={idToken!} onUpdateLocation={cloud.updateAgentLocation} onReviewTicket={cloud.reviewTicket} />
+        <DashboardView active={view === "dashboard"} widgets={widgets} events={events} onRemoveWidget={(id) => { void cloud.deleteWidget(id).catch(() => {}); }} onOpenBuilder={() => setActiveSheet("builder")} reports={reports.reports} idToken={idToken!} businessName={onboarding.me?.businessName ?? ""} onDeleteReport={reports.remove} hasMoreReports={reports.hasMore} loadingMoreReports={reports.loadingMore} onLoadMoreReports={() => { void reports.loadMore(); }} />
+        <RobotsView active={view === "robots"} events={events} latestEventId={latestEventId} robots={robots} codes={cloud.codes} tickets={cloud.reviewTickets} idToken={idToken!} onUpdateLocation={cloud.updateAgentLocation} onReviewTicket={cloud.reviewTicket} />
       </main>
       <Overlay open={activeSheet !== null} onClick={() => setActiveSheet(null)} />
       <AiSheet open={activeSheet === "ai"} onOpen={() => setActiveSheet("ai")} onClose={() => setActiveSheet(null)} onCreateWidget={addWidget} idToken={idToken!} businessName={onboarding.me?.businessName ?? ""} onReportSaved={() => void reports.refresh()} />

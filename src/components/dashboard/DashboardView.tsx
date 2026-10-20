@@ -17,6 +17,9 @@ interface DashboardViewProps {
   idToken: string;
   businessName: string;
   onDeleteReport: (reportId: string) => Promise<void>;
+  hasMoreReports: boolean;
+  loadingMoreReports: boolean;
+  onLoadMoreReports: () => void;
 }
 
 interface WidgetLayout { x: number; y: number; w: number; h: number }
@@ -36,7 +39,7 @@ function defaultLayout(index: number, type: Widget["type"]): WidgetLayout {
   return { x: 48 + column * 340, y: 106 + row * 242, w: type === "kpi" ? 280 : 320, h: type === "kpi" ? 156 : 216 };
 }
 
-export function DashboardView({ active, widgets, events, onRemoveWidget, onOpenBuilder, reports, idToken, businessName, onDeleteReport }: DashboardViewProps) {
+export function DashboardView({ active, widgets, events, onRemoveWidget, onOpenBuilder, reports, idToken, businessName, onDeleteReport, hasMoreReports, loadingMoreReports, onLoadMoreReports }: DashboardViewProps) {
   const [layout, setLayout] = useState<LayoutMap>(loadLayout);
   const [selected, setSelected] = useState<string | null>(null);
   const [fontLevel, setFontLevel] = useFontLevel();
@@ -107,7 +110,7 @@ export function DashboardView({ active, widgets, events, onRemoveWidget, onOpenB
         })}
         {hasReports && layout[REPORTS_CARD_ID] && (
           <div className={`widget-position${selected === REPORTS_CARD_ID ? " selected" : ""}`} style={{ left: layout[REPORTS_CARD_ID].x, top: layout[REPORTS_CARD_ID].y, width: layout[REPORTS_CARD_ID].w, height: layout[REPORTS_CARD_ID].h }} onPointerDown={(e) => { e.stopPropagation(); setSelected(REPORTS_CARD_ID); }}>
-            <ReportsWidgetCard reports={reports} idToken={idToken} businessName={businessName} onDelete={onDeleteReport} onDragStart={(e) => start("drag", REPORTS_CARD_ID, e)} onResizeStart={(e) => start("resize", REPORTS_CARD_ID, e)} />
+            <ReportsWidgetCard reports={reports} idToken={idToken} businessName={businessName} onDelete={onDeleteReport} hasMore={hasMoreReports} loadingMore={loadingMoreReports} onLoadMore={onLoadMoreReports} onDragStart={(e) => start("drag", REPORTS_CARD_ID, e)} onResizeStart={(e) => start("resize", REPORTS_CARD_ID, e)} />
           </div>
         )}
       </div>

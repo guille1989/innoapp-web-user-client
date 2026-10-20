@@ -124,7 +124,13 @@ export const api = {
   me: (token: string, signal?: AbortSignal) => request<ApiMe>(token, "/me", { signal }),
   updateOnboarding: (token: string, action: OnboardingAction, signal?: AbortSignal) =>
     request<{ onboarding: ApiOnboardingState }>(token, "/me/onboarding", { method: "PATCH", body: JSON.stringify({ action }), signal }),
-  tickets: (token: string, signal?: AbortSignal) => request<{ tickets: ApiTicket[] }>(token, "/tickets?limit=100", { signal }),
+  /** Una página de tickets; `nextCursor` viene solo si hay más. Con `status` consulta el índice por estado. */
+  tickets: (token: string, opts: { status?: ApiTicket["status"]; cursor?: string } = {}, signal?: AbortSignal) => {
+    const query = new URLSearchParams({ limit: "100" });
+    if (opts.status) query.set("status", opts.status);
+    if (opts.cursor) query.set("cursor", opts.cursor);
+    return request<{ tickets: ApiTicket[]; nextCursor?: string }>(token, `/tickets?${query}`, { signal });
+  },
   /**
    * Confirmar o descartar un ticket `needs_review` — la única forma en que
    * sale de ese estado. `capturedAt` se manda porque ya lo tiene el
@@ -164,7 +170,8 @@ export const api = {
   createWidget: (token: string, body: Omit<ApiWidget, "widgetId" | "createdAt">, signal?: AbortSignal) =>
     request<ApiWidget>(token, "/widgets", { method: "POST", body: JSON.stringify(body), signal }),
   deleteWidget: (token: string, id: string, signal?: AbortSignal) => request<void>(token, `/widgets/${encodeURIComponent(id)}`, { method: "DELETE", signal }),
-  reports: (token: string, signal?: AbortSignal) => request<{ reports: ApiReportListItem[] }>(token, "/reports", { signal }),
+  reports: (token: string, cursor?: string, signal?: AbortSignal) =>
+    request<{ reports: ApiReportListItem[]; nextCursor?: string }>(token, `/reports${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`, { signal }),
   report: (token: string, reportId: string, signal?: AbortSignal) => request<ApiStoredReport>(token, `/reports/${encodeURIComponent(reportId)}`, { signal }),
   deleteReport: (token: string, reportId: string, signal?: AbortSignal) => request<void>(token, `/reports/${encodeURIComponent(reportId)}`, { method: "DELETE", signal }),
   assistantAsk: (token: string, question: string, history: ApiAssistantHistoryTurn[] = [], signal?: AbortSignal) =>

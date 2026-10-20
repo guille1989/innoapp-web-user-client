@@ -8,12 +8,15 @@ interface ReportsWidgetCardProps {
   idToken: string;
   businessName: string;
   onDelete: (reportId: string) => Promise<void>;
+  hasMore: boolean;
+  loadingMore: boolean;
+  onLoadMore: () => void;
   onDragStart: (e: React.PointerEvent) => void;
   onResizeStart: (e: React.PointerEvent) => void;
 }
 
 /** Sin límite fijo de filas: el cuerpo scrollea si la tarjeta es chica (los reportes viven 30 días como mucho). */
-export function ReportsWidgetCard({ reports, idToken, businessName, onDelete, onDragStart, onResizeStart }: ReportsWidgetCardProps) {
+export function ReportsWidgetCard({ reports, idToken, businessName, onDelete, hasMore, loadingMore, onLoadMore, onDragStart, onResizeStart }: ReportsWidgetCardProps) {
   const scope = useRequestScope(idToken);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -59,6 +62,7 @@ export function ReportsWidgetCard({ reports, idToken, businessName, onDelete, on
             </div>
           );
         })}
+        {hasMore && <button className="chip" disabled={loadingMore} onClick={onLoadMore}>{loadingMore ? "Cargando…" : "Cargar más"}</button>}
       </div>
       <button className="resize-handle" onPointerDown={onResizeStart} aria-label="Redimensionar reportes"><span>⌟</span></button>
     </article>

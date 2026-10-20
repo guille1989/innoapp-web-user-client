@@ -15,6 +15,22 @@ const POLL_MS = 30_000;
 // miles de buckets (y el backend corta en 800, los MÁS VIEJOS).
 const HOURLY_RANGE = () => ({ dateFrom: localDateKey(-1), dateTo: localDateKey() });
 
+// Tope defensivo al recorrer la cola de revisión (100 por página): una cola de
+// miles de tickets sin revisar es un problema de operación, no de paginación.
+const MAX_REVIEW_PAGES = 20;
+
+async function fetchAllNeedsReview(idToken: string, signal: AbortSignal): Promise<ApiTicket[]> {
+  const all: ApiTicket[] = [];
+  let cursor: string | undefined;
+  for (let page = 0; page < MAX_REVIEW_PAGES; page++) {
+    const result = await api.tickets(idToken, { status: "needs_review", cursor }, signal);
+    all.push(...result.tickets);
+    cursor = result.nextCursor;
+    if (!cursor) break;
+  }
+  return all;
+}
+
 function mergeAgentsKeepingNewest(current: ApiAgent[], incoming: ApiAgent[]): ApiAgent[] {
   const currentById = new Map(current.map((agent) => [agent.agentId, agent]));
   return incoming.map((agent) => {
@@ -26,7 +42,10 @@ function mergeAgentsKeepingNewest(current: ApiAgent[], incoming: ApiAgent[]): Ap
 
 export function useCloudData(idToken: string) {
   const scope = useRequestScope(idToken);
+  // `tickets` = los 100 más recientes (feed de actividad). `reviewTickets` = TODA la cola
+  // `needs_review`, pedida por estado: filtrar los 100 recientes ocultaba los pendientes viejos.
   const [tickets, setTickets] = useState<ApiTicket[]>([]);
+  const [reviewTickets, setReviewTickets] = useState<ApiTicket[]>([]);
   const [agents, setAgents] = useState<ApiAgent[]>([]);
   const [codes, setCodes] = useState<ApiActivationCode[]>([]);
   const [widgets, setWidgets] = useState<ApiWidget[]>([]);
@@ -57,8 +76,9 @@ export function useCloudData(idToken: string) {
     const task = scope.start("refresh");
     const agentTask = scope.start("agents");
     try {
-      const [ticketResult, agentResult, codeResult, widgetResult] = await Promise.all([
-        api.tickets(idToken, task.signal),
+      const [ticketResult, reviewResult, agentResult, codeResult, widgetResult] = await Promise.all([
+        api.tickets(idToken, {}, task.signal),
+        fetchAllNeedsReview(idToken, task.signal),
         api.agents(idToken, AbortSignal.any([task.signal, agentTask.signal])).catch((err) => {
           if (!agentTask.isCurrent()) return null;
           throw err;
@@ -67,6 +87,7 @@ export function useCloudData(idToken: string) {
       ]);
       if (!task.isCurrent()) return;
       setTickets(ticketResult.tickets);
+      setReviewTickets(reviewResult);
       if (agentTask.isCurrent() && agentResult) setAgents((current) => mergeAgentsKeepingNewest(current, agentResult.agents));
       agentTask.finish();
       setCodes(codeResult.codes);
@@ -141,5 +162,5 @@ export function useCloudData(idToken: string) {
     mutate("review:" + ticketId, (signal) => api.reviewTicket(idToken, ticketId, capturedAt, action, signal)), [idToken, mutate]);
 
   const widgetData = useMemo(() => Object.fromEntries(Object.entries(widgetStates).map(([id, state]) => [id, state.data])), [widgetStates]);
-  return { tickets, agents, codes, widgets, widgetData, widgetStates, error, loading, refresh, refreshAgents, createWidget, deleteWidget, updateAgentLocation, reviewTicket };
+  return { tickets, reviewTickets, agents, codes, widgets, widgetData, widgetStates, error, loading, refresh, refreshAgents, createWidget, deleteWidget, updateAgentLocation, reviewTicket };
 }

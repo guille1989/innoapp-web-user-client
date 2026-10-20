@@ -12,13 +12,17 @@ export function useReports(idToken: string) {
   const [reports, setReports] = useState<ApiReportListItem[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [nextCursor, setNextCursor] = useState<string | undefined>();
+  const [loadingMore, setLoadingMore] = useState(false);
 
+  // Recarga la primera página (lo más nuevo); si el usuario había pedido más, vuelve al inicio.
   const refresh = useCallback(async () => {
     const task = scope.start("reports");
     try {
-      const { reports: items } = await api.reports(idToken, task.signal);
+      const { reports: items, nextCursor: cursor } = await api.reports(idToken, undefined, task.signal);
       if (!task.isCurrent()) return;
       setReports(items);
+      setNextCursor(cursor);
       setError(null);
     } catch (err) {
       if (task.isCurrent()) setError(err instanceof Error ? err.message : "No se pudieron cargar los reportes");
@@ -29,6 +33,26 @@ export function useReports(idToken: string) {
   }, [idToken, scope]);
 
   useEffect(() => { void refresh(); }, [refresh]);
+
+  const loadMore = useCallback(async () => {
+    if (!nextCursor) return;
+    const task = scope.start("reports-more");
+    setLoadingMore(true);
+    try {
+      const { reports: items, nextCursor: cursor } = await api.reports(idToken, nextCursor, task.signal);
+      if (!task.isCurrent()) return;
+      setReports((current) => {
+        const known = new Set(current.map((r) => r.reportId));
+        return [...current, ...items.filter((r) => !known.has(r.reportId))];
+      });
+      setNextCursor(cursor);
+    } catch (err) {
+      if (task.isCurrent()) setError(err instanceof Error ? err.message : "No se pudieron cargar más reportes");
+    } finally {
+      if (task.isCurrent()) setLoadingMore(false);
+      task.finish();
+    }
+  }, [idToken, nextCursor, scope]);
 
   const remove = useCallback(async (reportId: string) => {
     scope.cancel("reports");
@@ -44,5 +68,5 @@ export function useReports(idToken: string) {
     }
   }, [idToken, scope]);
 
-  return { reports, loaded, error, setError, refresh, remove };
+  return { reports, loaded, error, setError, refresh, remove, hasMore: nextCursor !== undefined, loadingMore, loadMore };
 }
