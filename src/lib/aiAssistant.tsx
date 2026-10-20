@@ -36,7 +36,10 @@ export function parseWidgetIntent(q: string, previous?: string): WidgetIntent | 
   // una línea temporal aunque no diga la palabra "línea" — sin esto el tipo
   // caía en Barras y el grupo por defecto era "puerto", nada que ver con lo
   // pedido.
-  const wantsTemporal = /\bd[ií]as?\b|\bsemanas?\b|\bmes(es)?\b|\btiempo\b|por fecha/.test(q);
+  // "Evolución"/"tendencia" también son eje de tiempo ("una gráfica de la
+  // evolución de ventas" caía en Barras por agente), y "hora" pide el eje por hora.
+  const wantsHourly = /\bhoras?\b|\bhorari[oa]s?\b/.test(q);
+  const wantsTemporal = wantsHourly || /\bd[ií]as?\b|\bsemanas?\b|\bmes(es)?\b|\btiempo\b|por fecha|evoluci[oó]n|tendencia/.test(q);
 
   let field: AggregatableField = "event_count";
   if (/venta|monto|ingreso|total/.test(q) || (isAverage && /ticket/.test(q))) field = "total";
@@ -55,7 +58,7 @@ export function parseWidgetIntent(q: string, previous?: string): WidgetIntent | 
   if (KPI_RE.test(q)) type = "kpi";
   else if (DONUT_RE.test(q)) type = "donut";
   else if (/l[ií]nea/.test(q) || wantsTemporal) type = "line";
-  if (type === "line") group = "day";
+  if (type === "line") group = wantsHourly ? "hour" : "day";
   else if (type !== "kpi" && !group) group = "agent";
 
   const agg: Aggregation = isAverage ? "avg" : "sum";
