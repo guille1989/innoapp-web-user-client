@@ -93,7 +93,7 @@ export function DashboardView({ active, widgets, events, onRemoveWidget, onOpenB
       <div className="canvas-vignette" />
       <div className="canvas-intro"><span>Espacio de datos</span><strong>{widgets.length} {widgets.length === 1 ? "widget" : "widgets"}</strong></div>
       {active && (
-        <TextSizeControl className="glass" level={fontLevel} onChange={setFontLevel} label="Tamaño del texto de los widgets y del asistente" />
+        <TextSizeControl className="glass" level={fontLevel} onChange={setFontLevel} label="Tamaño del texto de la vista" />
       )}
       <WidgetFontScaleProvider value={fontScale}>
       <div className="canvas-widgets" style={{ "--wfs": fontScale } as React.CSSProperties}>
