@@ -49,8 +49,7 @@ export function TopBar({ active, onChange, onOpenGuide }: TopBarProps) {
   return (
     <header className="floating-header">
       <div className="floating-brand glass">
-        <img src="/brand/innoapp-mark.png" alt="" />
-        <strong>Inno<span>App</span></strong>
+        <img src="/brand/innoapp-mark.png" alt="InnoApp" />
       </div>
       <nav className="view-switcher glass" aria-label="Secciones principales">
         <button data-tour="view-ai" className={active === "ai" ? "active" : ""} onClick={() => onChange("ai")}>IA</button>
