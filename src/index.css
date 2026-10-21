@@ -256,6 +256,11 @@ button { border: 0; background: none; cursor: pointer; }
 .ai-chat.empty .ai-chat-composer { padding-bottom: 0; }
 .app-footer { position: fixed; z-index: 1001; /* sobre los paneles de Leaflet (hasta 1000) y bajo las hojas y modales (1100+) */ left: 0; right: 0; bottom: calc(14px + env(safe-area-inset-bottom)); text-align: center; color: var(--muted); opacity: .5; font-size: calc(11px * var(--afs, 1)); letter-spacing: .02em; pointer-events: none; }
 .app-footer strong { font-weight: 600; color: var(--teal); }
+.ai-chat.loading > :not(.canvas-grid):not(.canvas-vignette) { opacity: 0; }
+.ai-chat-toolbar { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+.ai-chat-toolbar button { display: flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 8px; color: var(--muted); font-size: calc(12px * var(--afs, 1)); transition: .15s; }
+.ai-chat-toolbar button:hover { color: var(--teal); background: var(--teal-dim); }
+.ai-chat-toolbar svg { width: 13px; }
 .ai-chat-usage { margin-bottom: 8px; color: var(--muted); font-size: calc(12px * var(--afs, 1)); text-align: center; }
 .ai-chat-input { display: flex; align-items: center; gap: 10px; padding: 12px 12px 12px 20px; border-radius: 24px; }
 .ai-chat.empty .ai-chat-input { padding: 18px 16px 18px 26px; border-radius: 28px; }

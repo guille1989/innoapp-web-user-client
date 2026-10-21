@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { IconAi, IconClose, IconSend } from "../icons";
 import { TextSizeControl } from "../dashboard/TextSizeControl";
 import { useFontLevel } from "../dashboard/fontScale";
+import { ChatMessageContent } from "./ChatMessageContent";
 import { SUGGESTED, useAssistantChat } from "./useAssistantChat";
 import type { Widget } from "../../types";
 
@@ -19,7 +20,7 @@ interface AiSheetProps {
 }
 
 export function AiSheet({ open, onOpen, onClose, onCreateWidget, idToken, businessName, onReportSaved, hideDock }: AiSheetProps) {
-  const { messages, typing, blocked, usageNotice, send } = useAssistantChat({ idToken, businessName, onCreateWidget, onReportSaved });
+  const { messages, typing, blocked, usageNotice, send } = useAssistantChat({ idToken, onCreateWidget, onReportSaved });
   const [fontLevel, setFontLevel] = useFontLevel();
   const [input, setInput] = useState("");
   const [dockInput, setDockInput] = useState("");
@@ -58,7 +59,7 @@ export function AiSheet({ open, onOpen, onClose, onCreateWidget, idToken, busine
           <button className="ai-close" onClick={onClose} aria-label="Cerrar asistente"><IconClose /></button>
         </header>
         <div className="ai-body" ref={bodyRef}>
-          {messages.map((message) => <div className={`msg ${message.role}`} key={message.id}><div className="msg-avatar">{message.role === "ai" ? "IA" : "Tú"}</div><div className="msg-bubble">{message.content}</div></div>)}
+          {messages.map((message) => <div className={`msg ${message.role}`} key={message.id}><div className="msg-avatar">{message.role === "ai" ? "IA" : "Tú"}</div><div className="msg-bubble"><ChatMessageContent message={message} businessName={businessName} /></div></div>)}
           {typing && <div className="msg ai"><div className="msg-avatar">IA</div><div className="msg-bubble"><div className="typing"><span /><span /><span /></div></div></div>}
         </div>
         <div className="suggested">{SUGGESTED.map((item) => <button className="chip" key={item.q} onClick={() => ask(item.q)}>{item.label}</button>)}</div>

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { IconSend } from "../icons";
+import { IconPlus, IconSend } from "../icons";
 import { useFontLevel } from "../dashboard/fontScale";
+import { ChatMessageContent } from "./ChatMessageContent";
 import { SUGGESTED, useAssistantChat } from "./useAssistantChat";
 import type { Widget } from "../../types";
 
@@ -14,7 +15,7 @@ interface AiChatViewProps {
 
 /** Vista IA: conversación a pantalla completa con el asistente de datos (mismo backend que el panel flotante). */
 export function AiChatView({ active, onCreateWidget, idToken, businessName, onReportSaved }: AiChatViewProps) {
-  const { messages, typing, blocked, usageNotice, send } = useAssistantChat({ idToken, businessName, onCreateWidget, onReportSaved });
+  const { messages, typing, ready, blocked, usageNotice, send, startNewConversation } = useAssistantChat({ idToken, onCreateWidget, onReportSaved, persist: true });
   const [input, setInput] = useState("");
   const [fontLevel] = useFontLevel();
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -50,14 +51,14 @@ export function AiChatView({ active, onCreateWidget, idToken, businessName, onRe
   }
 
   return (
-    <section className={`ai-chat view${active ? " active" : ""}${started ? "" : " empty"}`} aria-label="Conversación con la IA">
+    <section className={`ai-chat view${active ? " active" : ""}${started ? "" : " empty"}${ready ? "" : " loading"}`} aria-label="Conversación con la IA">
       <div className="canvas-grid" />
       <div className="canvas-vignette" />
       {started
         ? (
           <div className="ai-chat-body" ref={bodyRef}>
             <div className="ai-chat-thread">
-              {messages.map((message) => <div className={`msg ${message.role}`} key={message.id}><div className="msg-avatar">{message.role === "ai" ? "IA" : "Tú"}</div><div className="msg-bubble">{message.content}</div></div>)}
+              {messages.map((message) => <div className={`msg ${message.role}`} key={message.id}><div className="msg-avatar">{message.role === "ai" ? "IA" : "Tú"}</div><div className="msg-bubble"><ChatMessageContent message={message} businessName={businessName} /></div></div>)}
               {typing && <div className="msg ai"><div className="msg-avatar">IA</div><div className="msg-bubble"><div className="typing"><span /><span /><span /></div></div></div>}
             </div>
           </div>
@@ -69,11 +70,12 @@ export function AiChatView({ active, onCreateWidget, idToken, businessName, onRe
           </>
         )}
       <div className="ai-chat-composer">
+        {started && <div className="ai-chat-toolbar"><button type="button" onClick={startNewConversation}><IconPlus />Nueva conversación</button></div>}
         {usageNotice && <div className="ai-chat-usage" role="status">{usageNotice}</div>}
         <div className="ai-chat-input glass">
           <textarea ref={textareaRef} rows={1} placeholder={blocked ? "Esperá un momento para volver a preguntar…" : started ? "Pregunta a tu agente sobre cualquier dato…" : SUGGESTED[hint].q} aria-label="Mensaje para la IA" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); ask(input); } }} />
           <div className="ai-chat-tools">
-            <button className="ai-send" onClick={() => ask(input)} aria-label="Enviar" disabled={!input.trim() || typing}><IconSend /></button>
+            <button className="ai-send" onClick={() => ask(input)} aria-label="Enviar" disabled={!input.trim() || typing || !ready}><IconSend /></button>
           </div>
         </div>
       </div>
