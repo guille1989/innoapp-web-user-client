@@ -61,7 +61,8 @@ export interface ApiReportListItem { reportId: string; title: string; createdAt:
 export interface ApiStoredReport { reportId: string; summary: string; report: ApiReport; createdAt: string; expiresAt: string }
 export interface ApiAssistantHistoryTurn { role: "user" | "assistant"; text: string }
 export interface ApiStoredMessage { role: "user" | "ai"; text: string; reportId?: string }
-export interface ApiConversation { conversationId: string; messages: ApiStoredMessage[]; history: ApiAssistantHistoryTurn[]; updatedAt: string; expiresAt: string }
+export interface ApiConversationSummary { conversationId: string; title: string; createdAt: string; updatedAt: string; expiresAt: string }
+export interface ApiConversation extends ApiConversationSummary { messages: ApiStoredMessage[]; history: ApiAssistantHistoryTurn[] }
 export interface ApiOnboardingState {
   version: 1;
   startedAt?: string;
@@ -181,8 +182,13 @@ export const api = {
   deleteReport: (token: string, reportId: string, signal?: AbortSignal) => request<void>(token, `/reports/${encodeURIComponent(reportId)}`, { method: "DELETE", signal }),
   assistantAsk: (token: string, question: string, history: ApiAssistantHistoryTurn[] = [], signal?: AbortSignal) =>
     request<ApiAssistantAnswer>(token, "/assistant/ask", { method: "POST", body: JSON.stringify({ question, history, timeZone: browserTimeZone() }), signal }),
-  /** La conversación más reciente de la persona logueada (`null` si no tiene o venció). */
-  conversation: (token: string, signal?: AbortSignal) => request<{ conversation: ApiConversation | null }>(token, "/assistant/conversation", { signal }),
+  /** Historial de conversaciones de la persona logueada (solo metadata), de la más nueva a la más vieja. */
+  conversations: (token: string, cursor?: string, signal?: AbortSignal) =>
+    request<{ conversations: ApiConversationSummary[]; nextCursor?: string }>(token, `/assistant/conversations${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`, { signal }),
+  conversation: (token: string, conversationId: string, signal?: AbortSignal) =>
+    request<ApiConversation>(token, `/assistant/conversations/${encodeURIComponent(conversationId)}`, { signal }),
   saveConversation: (token: string, conversationId: string, body: { messages: ApiStoredMessage[]; history: ApiAssistantHistoryTurn[] }, signal?: AbortSignal) =>
-    request<void>(token, `/assistant/conversation/${encodeURIComponent(conversationId)}`, { method: "PUT", body: JSON.stringify(body), signal }),
+    request<void>(token, `/assistant/conversations/${encodeURIComponent(conversationId)}`, { method: "PUT", body: JSON.stringify(body), signal }),
+  deleteConversation: (token: string, conversationId: string, signal?: AbortSignal) =>
+    request<void>(token, `/assistant/conversations/${encodeURIComponent(conversationId)}`, { method: "DELETE", signal }),
 };

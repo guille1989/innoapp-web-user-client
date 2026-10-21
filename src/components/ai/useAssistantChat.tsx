@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { api, ApiError, type ApiAssistantHistoryTurn } from "../../api/client";
+import { api, ApiError, type ApiAssistantHistoryTurn, type ApiConversation, type ApiConversationSummary } from "../../api/client";
 import { respondLocally } from "../../lib/aiAssistant";
-import { conversationSignature, newConversationId, toStoredMessages, type ChatMessage } from "../../lib/conversation";
+import {
+  conversationCreatedAt, conversationSignature, deriveTitle, newConversationId, readActiveConversation, toStoredMessages, writeActiveConversation, type ChatMessage,
+} from "../../lib/conversation";
 import { useRequestScope } from "../../hooks/useRequestScope";
 import type { Widget } from "../../types";
 
@@ -33,10 +35,12 @@ interface UseAssistantChatOptions {
   onReportSaved: () => void;
   /** Guarda la conversación en el backend y la restaura al volver a cargar la página. */
   persist?: boolean;
+  /** El backend guardó la conversación: el historial actualiza su fila (título nuevo, fecha de actividad). */
+  onConversationSaved?: (summary: ApiConversationSummary) => void;
 }
 
 /** Estado y envío de la conversación con el asistente de datos; lo comparten el panel flotante y la vista IA. */
-export function useAssistantChat({ idToken, onCreateWidget, onReportSaved, persist = false }: UseAssistantChatOptions) {
+export function useAssistantChat({ idToken, onCreateWidget, onReportSaved, persist = false, onConversationSaved }: UseAssistantChatOptions) {
   const scope = useRequestScope(idToken);
   const [messages, setMessages] = useState<ChatMessage[]>(() => [greeting()]);
   const [typing, setTyping] = useState(false);
@@ -53,7 +57,11 @@ export function useAssistantChat({ idToken, onCreateWidget, onReportSaved, persi
   // Renovar el JWT no debe volver a restaurar la conversación: los efectos leen el token vigente de acá.
   const token = useRef(idToken);
   token.current = idToken;
+  const onSaved = useRef(onConversationSaved);
+  onSaved.current = onConversationSaved;
+  // Conversación abierta: el ref lo leen los efectos, el estado resalta la fila del historial.
   const conversationId = useRef<string | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
   const lastSaved = useRef<string | null>(null);
   const saveChain = useRef<Promise<void>>(Promise.resolve());
   const usedNow = usage.minute === currentMinute() ? usage.count : 0;
@@ -68,40 +76,56 @@ export function useAssistantChat({ idToken, onCreateWidget, onReportSaved, persi
     return () => window.clearInterval(id);
   }, [usedNow]);
 
-  // Restaura la conversación guardada. Si falla (sin red, endpoint sin desplegar) se arranca de cero.
-  useEffect(() => {
-    if (!persist) return;
-    const task = scope.start("restore-conversation");
+  // Vuelca una conversación guardada en el hilo. Los reportes no viajan en ella: se piden aparte
+  // para que los botones de PDF/CSV vuelvan a funcionar.
+  function applyConversation(conversation: ApiConversation, signal: AbortSignal) {
+    conversationId.current = conversation.conversationId;
+    setActiveId(conversation.conversationId);
+    lastSaved.current = conversationSignature(conversation.conversationId, conversation.messages, conversation.history);
+    setMessages([greeting(), ...conversation.messages.map((m): ChatMessage => ({ id: msgSeq++, role: m.role, text: m.text, ...(m.reportId ? { reportId: m.reportId } : {}) }))]);
+    setHistory(conversation.history);
+    for (const message of conversation.messages) {
+      if (!message.reportId) continue;
+      void api.report(token.current, message.reportId, signal).then(
+        ({ report }) => { if (!signal.aborted) setMessages((prev) => prev.map((m) => (m.reportId === message.reportId ? { ...m, report } : m))); },
+        () => {}, // vencido o borrado: queda el texto sin botones
+      );
+    }
+  }
+
+  // Pide una conversación con tope de tiempo: si el backend tarda o falla devuelve null y quien llama decide.
+  async function fetchConversation(id: string, task: { signal: AbortSignal; isCurrent: () => boolean }): Promise<ApiConversation | null> {
     const timeout = new AbortController();
     const timer = window.setTimeout(() => timeout.abort(), RESTORE_TIMEOUT_MS);
     const onAbort = () => timeout.abort();
     task.signal.addEventListener("abort", onAbort);
+    try {
+      const conversation = await api.conversation(token.current, id, timeout.signal);
+      return task.isCurrent() && !timeout.signal.aborted ? conversation : null;
+    } catch {
+      return null;
+    } finally {
+      window.clearTimeout(timer);
+      task.signal.removeEventListener("abort", onAbort);
+    }
+  }
+
+  // Tras un refresh se reabre la conversación que estaba abierta en esta pestaña; una pestaña nueva
+  // arranca en blanco (el historial es el camino a las demás). Si falla, se arranca de cero.
+  useEffect(() => {
+    if (!persist) return;
+    const id = readActiveConversation();
+    if (!id) { setReady(true); return; }
+    const task = scope.start("restore-conversation");
     void (async () => {
-      try {
-        const { conversation } = await api.conversation(token.current, timeout.signal);
-        if (!task.isCurrent() || timeout.signal.aborted || !conversation) return;
-        conversationId.current = conversation.conversationId;
-        lastSaved.current = conversationSignature(conversation.conversationId, conversation.messages, conversation.history);
-        setMessages([greeting(), ...conversation.messages.map((m): ChatMessage => ({ id: msgSeq++, role: m.role, text: m.text, ...(m.reportId ? { reportId: m.reportId } : {}) }))]);
-        setHistory(conversation.history);
-        // Los reportes no viajan en la conversación: se piden aparte para que los botones de PDF/CSV vuelvan a funcionar.
-        for (const message of conversation.messages) {
-          if (!message.reportId) continue;
-          void api.report(token.current, message.reportId, task.signal).then(
-            ({ report }) => { if (!task.signal.aborted) setMessages((prev) => prev.map((m) => (m.reportId === message.reportId ? { ...m, report } : m))); },
-            () => {}, // vencido o borrado: queda el texto sin botones
-          );
-        }
-      } catch {
-        // Sin conversación guardada que mostrar.
-      } finally {
-        window.clearTimeout(timer);
-        task.signal.removeEventListener("abort", onAbort);
-        if (task.isCurrent()) setReady(true);
-        task.finish();
-      }
+      const conversation = await fetchConversation(id, task);
+      if (conversation) applyConversation(conversation, task.signal);
+      else if (task.isCurrent()) writeActiveConversation(null);
+      if (task.isCurrent()) setReady(true);
+      task.finish();
     })();
-    return () => { window.clearTimeout(timer); task.signal.removeEventListener("abort", onAbort); };
+    // Solo depende de `persist`/`scope`: las funciones de arriba leen refs y su comportamiento no cambia.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [persist, scope]);
 
   // Guarda al terminar cada intercambio (no mientras el asistente responde). Los guardados van
@@ -112,10 +136,17 @@ export function useAssistantChat({ idToken, onCreateWidget, onReportSaved, persi
     if (stored.length === 0) return;
     conversationId.current ??= newConversationId();
     const id = conversationId.current;
+    if (activeId !== id) setActiveId(id);
+    writeActiveConversation(id);
     const signature = conversationSignature(id, stored, history);
     if (signature === lastSaved.current) return;
     lastSaved.current = signature;
-    saveChain.current = saveChain.current.then(() => api.saveConversation(token.current, id, { messages: stored, history }).catch(() => { lastSaved.current = null; }));
+    const title = deriveTitle(stored);
+    saveChain.current = saveChain.current.then(() => api.saveConversation(token.current, id, { messages: stored, history }).then(
+      () => { onSaved.current?.({ conversationId: id, title, createdAt: conversationCreatedAt(id), updatedAt: new Date().toISOString(), expiresAt: "" }); },
+      () => { lastSaved.current = null; },
+    ));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [persist, ready, typing, messages, history]);
 
   function pushAiMessage(message: Omit<ChatMessage, "id" | "role">) {
@@ -178,14 +209,37 @@ export function useAssistantChat({ idToken, onCreateWidget, onReportSaved, persi
     }
   }
 
-  /** Empieza un hilo nuevo: la conversación anterior queda guardada y esta se guardará con otro id. */
+  /** Empieza un hilo nuevo: la conversación anterior queda guardada en el historial. */
   function startNewConversation() {
     scope.cancel("message");
+    scope.cancel("open-conversation");
     conversationId.current = null;
     lastSaved.current = null;
+    setActiveId(null);
+    writeActiveConversation(null);
+    setReady(true);
     setTyping(false);
     setMessages([greeting()]);
     setHistory([]);
+  }
+
+  /** Abre una conversación del historial. Una respuesta en curso se cancela para que no caiga en el hilo equivocado. */
+  async function openConversation(id: string) {
+    if (!persist || id === conversationId.current) return;
+    scope.cancel("message");
+    const task = scope.start("open-conversation");
+    setTyping(false);
+    setReady(false);
+    const conversation = await fetchConversation(id, task);
+    if (!task.isCurrent()) return;
+    if (conversation) {
+      applyConversation(conversation, task.signal);
+      writeActiveConversation(id);
+    } else {
+      pushAiMessage({ text: "No pude abrir esa conversación, probá de nuevo en un momento.", transient: true });
+    }
+    setReady(true);
+    task.finish();
   }
 
   const usageNotice = dayBlocked
@@ -194,5 +248,5 @@ export function useAssistantChat({ idToken, onCreateWidget, onReportSaved, persi
       ? `Límite alcanzado: podés volver a preguntar en ${waitSeconds} s.`
       : usedNow > 0 ? `Preguntas disponibles este minuto: ${remaining} de ${MINUTE_LIMIT}` : null;
 
-  return { messages, typing, ready, blocked, usageNotice, send, startNewConversation };
+  return { messages, typing, ready, blocked, usageNotice, activeId, send, startNewConversation, openConversation };
 }

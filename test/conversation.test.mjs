@@ -1,11 +1,17 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  conversationCreatedAt,
   conversationSignature,
+  deriveTitle,
+  groupConversations,
   MAX_STORED_MESSAGES,
   MAX_STORED_TEXT,
+  MAX_TITLE_LENGTH,
   newConversationId,
+  readActiveConversation,
   toStoredMessages,
+  writeActiveConversation,
 } from "../src/lib/conversation.ts";
 
 // Mismo formato que valida el backend (conversationStore.ts).
@@ -67,4 +73,53 @@ test("la firma cambia solo cuando cambia el contenido guardado", () => {
   assert.equal(conversationSignature("c1", messages, history), conversationSignature("c1", [{ role: "user", text: "hola" }], [{ role: "user", text: "hola" }]));
   assert.notEqual(conversationSignature("c1", messages, history), conversationSignature("c2", messages, history));
   assert.notEqual(conversationSignature("c1", messages, history), conversationSignature("c1", [...messages, { role: "ai", text: "qué tal" }], history));
+});
+
+test("el título es el primer mensaje del usuario, sin espacios de más y cortado", () => {
+  assert.equal(deriveTitle([{ role: "ai", text: "hola" }, { role: "user", text: "  ventas\n por   sucursal " }, { role: "user", text: "otro" }]), "ventas por sucursal");
+  assert.equal(deriveTitle([{ role: "user", text: "x".repeat(200) }]), `${"x".repeat(MAX_TITLE_LENGTH)}…`);
+  assert.equal(deriveTitle([{ role: "ai", text: "hola" }]), "Conversación");
+});
+
+test("la fecha de creación sale del prefijo ISO del id", () => {
+  assert.equal(conversationCreatedAt("2026-10-21T12:00:00.000Z_ab12cd34"), "2026-10-21T12:00:00.000Z");
+});
+
+test("el historial se agrupa por día local de creación y conserva el orden", () => {
+  const now = new Date(2026, 9, 21, 15, 0);
+  const at = (daysAgo, hour = 10) => new Date(2026, 9, 21 - daysAgo, hour).toISOString();
+  const item = (daysAgo, hour = 10) => ({ conversationId: `c-${daysAgo}-${hour}`, title: "t", createdAt: at(daysAgo, hour), updatedAt: at(daysAgo, hour), expiresAt: "" });
+  const groups = groupConversations([item(0, 14), item(0, 9), item(1), item(3), item(7), item(8), item(20)], now);
+
+  assert.deepEqual(groups.map((g) => [g.label, g.items.map((i) => i.conversationId)]), [
+    ["Hoy", ["c-0-14", "c-0-9"]],
+    ["Ayer", ["c-1-10"]],
+    ["Últimos 7 días", ["c-3-10", "c-7-10"]],
+    ["Más antiguas", ["c-8-10", "c-20-10"]],
+  ]);
+});
+
+test("una fecha inválida no rompe el agrupado", () => {
+  const groups = groupConversations([{ conversationId: "x", title: "t", createdAt: "no-es-fecha", updatedAt: "", expiresAt: "" }]);
+
+  assert.deepEqual(groups.map((g) => g.label), ["Más antiguas"]);
+});
+
+test("la conversación activa se guarda y se borra en el storage de la pestaña", () => {
+  const data = new Map();
+  const storage = { getItem: (k) => data.get(k) ?? null, setItem: (k, v) => data.set(k, v), removeItem: (k) => data.delete(k) };
+
+  assert.equal(readActiveConversation(storage), null);
+  writeActiveConversation("2026-10-21T12:00:00.000Z_ab12cd34", storage);
+  assert.equal(readActiveConversation(storage), "2026-10-21T12:00:00.000Z_ab12cd34");
+  writeActiveConversation(null, storage);
+  assert.equal(readActiveConversation(storage), null);
+});
+
+test("un storage que lanza errores no rompe la conversación activa", () => {
+  const broken = { getItem() { throw new Error("bloqueado"); }, setItem() { throw new Error("bloqueado"); }, removeItem() { throw new Error("bloqueado"); } };
+
+  assert.equal(readActiveConversation(broken), null);
+  assert.doesNotThrow(() => writeActiveConversation("x", broken));
+  assert.doesNotThrow(() => writeActiveConversation(null, broken));
 });
