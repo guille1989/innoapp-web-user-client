@@ -53,7 +53,8 @@ export function TopBar({ active, onChange, onOpenGuide }: TopBarProps) {
         <strong>Inno<span>App</span></strong>
       </div>
       <nav className="view-switcher glass" aria-label="Secciones principales">
-        <button data-tour="view-data" className={active === "dashboard" ? "active" : ""} onClick={() => onChange("dashboard")}>Datos</button>
+        <button data-tour="view-ai" className={active === "ai" ? "active" : ""} onClick={() => onChange("ai")}>IA</button>
+        <button data-tour="view-data"className={active === "dashboard" ? "active" : ""} onClick={() => onChange("dashboard")}>Datos</button>
         <button data-tour="view-agents" className={active === "robots" ? "active" : ""} onClick={() => onChange("robots")}>Agentes</button>
       </nav>
       <div className="header-tools">

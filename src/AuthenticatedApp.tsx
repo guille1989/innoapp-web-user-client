@@ -148,6 +148,7 @@ export function AuthenticatedApp() {
             {cloud.error && <button onClick={() => void cloud.refresh()}>Reintentar</button>}
           </div>
         )}
+        <section className={`view${view === "ai" ? " active" : ""}`} aria-label="IA" />
         <DashboardView active={view === "dashboard"} widgets={widgets} events={events} onRemoveWidget={(id) => { void cloud.deleteWidget(id).catch(() => {}); }} onOpenBuilder={() => setActiveSheet("builder")} reports={reports.reports} idToken={idToken!} businessName={onboarding.me?.businessName ?? ""} onDeleteReport={reports.remove} hasMoreReports={reports.hasMore} loadingMoreReports={reports.loadingMore} onLoadMoreReports={() => { void reports.loadMore(); }} />
         <RobotsView active={view === "robots"} events={events} latestEventId={latestEventId} robots={robots} codes={cloud.codes} tickets={cloud.reviewTickets} idToken={idToken!} onUpdateLocation={cloud.updateAgentLocation} onReviewTicket={cloud.reviewTicket} />
       </main>
