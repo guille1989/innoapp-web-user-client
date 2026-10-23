@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { formatWidgetValue } from "../../../lib/aggregate";
 import { fmtAxis, isAdditive, metricLabel } from "../../../lib/chartScale";
 import { CHART_OTHER_COLOR, CHART_PALETTE } from "../../../data/widgetLabels";
+import { usePeriod } from "../../../lib/periodFilter";
 import { useElementSize } from "./useElementSize";
 import type { AggregateRow, Widget } from "../../../types";
 
@@ -72,13 +73,14 @@ function arcPath(start: number, end: number, outer: number, inner: number, cente
 
 export function DonutChart({ widget: w }: { widget: Widget }) {
   const rows = w.data ?? [];
+  const [period] = usePeriod();
   const slotMemory = useRef(new Map<string, number>());
   const [active, setActive] = useState<string | null>(null);
   const [ringRef, size] = useElementSize<HTMLDivElement>();
   const additive = isAdditive(w);
 
   const { slices, hidden } = buildSlices(rows, slotMemory.current, additive, w.keyLabels);
-  if (slices.length === 0) return <div className="donut-wrap"><span className="widget-empty">Sin datos para esta agrupación</span></div>;
+  if (slices.length === 0) return <div className="donut-wrap"><span className="widget-empty">{period.preset === "all" ? "Sin datos para esta agrupación" : "Sin datos en este período"}</span></div>;
 
   const total = slices.reduce((sum, slice) => sum + slice.value, 0);
   const share = (value: number) => `${((value / total) * 100).toLocaleString("es-AR", { maximumFractionDigits: 1 })}%`;

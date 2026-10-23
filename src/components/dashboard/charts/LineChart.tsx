@@ -9,15 +9,13 @@ import {
   niceTicks,
   periodEndKey,
   pickTickIndices,
-  RANGE_LABELS,
   resolveRange,
   shortRangeLabel,
   tickLabel,
-  type RangePreset,
   type TimeGranularity,
 } from "../../../lib/chartScale";
+import { usePeriod } from "../../../lib/periodFilter";
 import { ChartTooltip } from "./ChartTooltip";
-import { RangePanel, RangePicker } from "./RangeControls";
 import { useElementSize } from "./useElementSize";
 import { useWidgetFontScale } from "../fontScale";
 import type { Widget } from "../../../types";
@@ -25,24 +23,21 @@ import type { Widget } from "../../../types";
 const GRANULARITY_LABELS: Record<TimeGranularity, string> = { day: "Día", week: "Semana", month: "Mes" };
 
 interface LineView {
-  range: RangePreset;
-  from?: string;
-  to?: string;
   granularity: TimeGranularity;
 }
 
-const DEFAULT_VIEW: LineView = { range: "30d", granularity: "day" };
+const DEFAULT_VIEW: LineView = { granularity: "day" };
 const VIEW_STORAGE_KEY = "innoapp.widget-view.v1";
 
-// Rango y agrupación son preferencias de quien mira (igual que el layout
-// del lienzo en DashboardView), no del widget: viven en localStorage y no
-// tocan el backend. Los datos diarios ya llegan completos en
-// `GET /widgets/{id}/data`, así que filtrar acá no cuesta otra consulta de Athena.
+// La agrupación es una preferencia de quien mira (igual que el layout del
+// lienzo en DashboardView), no del widget: vive en localStorage y no toca el
+// backend. El rango ya no es local: lo fija el período global de la cabecera
+// (`usePeriod`) y llega aplicado en los datos del widget. Las entradas viejas
+// guardaban también `range`/`from`/`to`; se ignoran.
 function loadView(widgetId: string): LineView {
   try {
     const saved = (JSON.parse(localStorage.getItem(VIEW_STORAGE_KEY) ?? "{}") as Record<string, Partial<LineView>>)[widgetId];
-    if (!saved || !(saved.range && saved.range in RANGE_LABELS) || !(saved.granularity && saved.granularity in GRANULARITY_LABELS)) return DEFAULT_VIEW;
-    return { ...DEFAULT_VIEW, ...saved };
+    return saved?.granularity && saved.granularity in GRANULARITY_LABELS ? { granularity: saved.granularity } : DEFAULT_VIEW;
   } catch {
     return DEFAULT_VIEW;
   }
@@ -65,31 +60,19 @@ const X_TICK_SPACING = 60;
 export function LineChart({ widget: w }: { widget: Widget }) {
   const scale = useWidgetFontScale();
   const [view, setView] = useState(() => loadView(w.id));
-  const [editingRange, setEditingRange] = useState(false);
+  const [period] = usePeriod();
   const [active, setActive] = useState<number | null>(null);
   const [plotRef, size] = useElementSize<HTMLDivElement>();
   useEffect(() => saveView(w.id, view), [w.id, view]);
 
   const dailyRows = (w.data ?? []).filter((row) => DAY_KEY.test(row.key)).sort((a, b) => a.key.localeCompare(b.key));
-  const range = resolveRange(view.range, view, dailyRows[0]?.key, dailyRows.at(-1)?.key);
+  const range = resolveRange(period.preset, period, dailyRows[0]?.key, dailyRows.at(-1)?.key);
   const points = buildTimeSeries(dailyRows, w, range, view.granularity);
   const hasDataInRange = dailyRows.some((row) => row.key >= range.from && row.key <= range.to);
   const activeIndex = active !== null && active < points.length ? active : null;
 
-  function changeRange(preset: RangePreset) {
-    if (preset === "custom") {
-      setView((current) => ({ ...current, range: "custom", from: range.from, to: range.to }));
-      setEditingRange(true);
-    } else {
-      setView((current) => ({ ...current, range: preset }));
-      setEditingRange(false);
-    }
-    setActive(null);
-  }
-
   const controls = (
     <div className="chart-controls">
-      <RangePicker view={view} resolved={range} editing={editingRange} onChange={changeRange} onToggleEdit={() => setEditingRange((open) => !open)} />
       <div className="chart-segmented" role="group" aria-label="Agrupación temporal">
         {(Object.keys(GRANULARITY_LABELS) as TimeGranularity[]).map((item) => (
           <button key={item} type="button" className={view.granularity === item ? "active" : ""} aria-pressed={view.granularity === item} onClick={() => { setView((current) => ({ ...current, granularity: item })); setActive(null); }}>
@@ -98,10 +81,6 @@ export function LineChart({ widget: w }: { widget: Widget }) {
         ))}
       </div>
     </div>
-  );
-
-  const rangePanel = editingRange && view.range === "custom" && (
-    <RangePanel resolved={range} onFrom={(value) => setView((current) => ({ ...current, from: value }))} onTo={(value) => setView((current) => ({ ...current, to: value }))} onDone={() => setEditingRange(false)} />
   );
 
   const hasValues = points.some((point) => point.value !== null);
@@ -113,7 +92,6 @@ export function LineChart({ widget: w }: { widget: Widget }) {
           <div className="line-plot line-plot-empty"><span className="widget-empty">{hasDataInRange
             ? "Faltan los pesos para agrupar este promedio. Consulta por día o actualiza los datos."
             : dailyRows.length ? "Sin datos en este rango" : "Todavía no hay datos para graficar"}</span></div>
-          {rangePanel}
         </div>
       </div>
     );
@@ -260,7 +238,6 @@ export function LineChart({ widget: w }: { widget: Widget }) {
             />
           )}
         </div>
-        {rangePanel}
       </div>
       <table className="sr-only">
         <caption>{w.title}</caption>

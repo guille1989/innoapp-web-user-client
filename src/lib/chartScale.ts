@@ -10,7 +10,7 @@ import type { AggregateRow, Aggregation, Widget } from "../types";
  */
 
 export type TimeGranularity = "day" | "week" | "month";
-export type RangePreset = "7d" | "30d" | "90d" | "all" | "custom";
+export type RangePreset = "today" | "7d" | "30d" | "90d" | "all" | "custom";
 
 export const DAY_KEY = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -69,9 +69,9 @@ export function periodEndKey(key: string, granularity: TimeGranularity): string 
   return addDays(nextPeriodKey(key, granularity), -1);
 }
 
-export const RANGE_LABELS: Record<RangePreset, string> = { "7d": "7 días", "30d": "30 días", "90d": "90 días", all: "Todo", custom: "Personalizado" };
+export const RANGE_LABELS: Record<RangePreset, string> = { today: "Hoy", "7d": "7 días", "30d": "30 días", "90d": "90 días", all: "Todo", custom: "Personalizado" };
 
-const PRESET_DAYS:Record<Exclude<RangePreset, "all" | "custom">, number> = { "7d": 7, "30d": 30, "90d": 90 };
+const PRESET_DAYS:Record<Exclude<RangePreset, "all" | "custom">, number> = { today: 1, "7d": 7, "30d": 30, "90d": 90 };
 
 export function resolveRange(
   preset: RangePreset,

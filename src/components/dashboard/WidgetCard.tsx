@@ -1,5 +1,6 @@
 import { formatWidgetValue } from "../../lib/aggregate";
 import { AGG_LABELS } from "../../data/widgetLabels";
+import { usePeriod } from "../../lib/periodFilter";
 import { IconTrash } from "../icons";
 import { BarChart } from "./charts/BarChart";
 import { DonutChart } from "./charts/DonutChart";
@@ -49,7 +50,8 @@ export function WidgetCard({ widget: w, onRemove, onDragStart, onResizeStart }: 
 }
 
 function KpiBody({ widget: w }: { widget: Widget }) {
+  const [period] = usePeriod();
   const value = w.data?.[0]?.value;
-  if (value === undefined) return <span className="widget-empty">Sin datos para esta métrica</span>;
+  if (value === undefined) return <span className="widget-empty">{period.preset === "all" ? "Sin datos para esta métrica" : "Sin datos en este período"}</span>;
   return <div className="kpi-body"><div className="kpi-value mono">{formatWidgetValue(w.field, value)}</div><div className="kpi-sub"><span className="trend-dot" />{w.field === "event_count" ? "conteo" : AGG_LABELS[w.agg].toLowerCase()} · {w.dataStatus === "stale" ? "último resultado válido" : w.dataLabel ?? "datos confirmados"}</div></div>;
 }

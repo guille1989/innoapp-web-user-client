@@ -1,10 +1,8 @@
-import { useEffect, useState } from "react";
-import { api } from "../../../api/client";
-import { useAuth } from "../../../auth/AuthContext";
+import { useState } from "react";
 import { formatWidgetValue } from "../../../lib/aggregate";
-import { fmtAxis, isAdditive, metricLabel, RANGE_LABELS, resolveRange, type RangePreset } from "../../../lib/chartScale";
+import { fmtAxis, isAdditive, metricLabel } from "../../../lib/chartScale";
+import { usePeriod } from "../../../lib/periodFilter";
 import { ChartTooltip } from "./ChartTooltip";
-import { RangePanel, RangePicker, type RangeView } from "./RangeControls";
 import { useElementSize } from "./useElementSize";
 import { useWidgetFontScale } from "../fontScale";
 import type { Widget } from "../../../types";
@@ -12,35 +10,6 @@ import type { Widget } from "../../../types";
 // Alto de fila a escala 1; el CSS (.bar-row) lo multiplica por --wfs igual que acá.
 const ROW_HEIGHT = 26;
 const VALUE_COLUMN = 46;
-
-// Igual que en LineChart, el rango es una preferencia de quien mira y vive en
-// localStorage. A diferencia de las líneas (que reciben datos diarios y filtran
-// en el navegador), las barras llegan agrupadas por categoría, así que un rango
-// distinto de "Todo" se pide al backend (`GET /widgets/{id}/data?dateFrom&dateTo`).
-// El default es "Todo": los números que ya veía quien tiene barras no cambian solos.
-const DEFAULT_VIEW: RangeView = { range: "all" };
-const VIEW_STORAGE_KEY = "innoapp.widget-bar-view.v1";
-
-function loadView(widgetId: string): RangeView {
-  try {
-    const saved = (JSON.parse(localStorage.getItem(VIEW_STORAGE_KEY) ?? "{}") as Record<string, Partial<RangeView>>)[widgetId];
-    if (!saved?.range || !(saved.range in RANGE_LABELS)) return DEFAULT_VIEW;
-    return { ...DEFAULT_VIEW, ...saved } as RangeView;
-  } catch {
-    return DEFAULT_VIEW;
-  }
-}
-
-function saveView(widgetId: string, view: RangeView) {
-  try {
-    const all = JSON.parse(localStorage.getItem(VIEW_STORAGE_KEY) ?? "{}") as Record<string, RangeView>;
-    localStorage.setItem(VIEW_STORAGE_KEY, JSON.stringify({ ...all, [widgetId]: view }));
-  } catch {
-    // Sin storage (modo privado, cuota): la vista vuelve al default al recargar.
-  }
-}
-
-type Row = { key: string; value: number };
 
 /**
  * Barras horizontales: las categorías (productos, puertos, estados) son
@@ -51,61 +20,16 @@ type Row = { key: string; value: number };
  * (debajo de la fila si entra, si no encima), no al de la lista entera.
  */
 export function BarChart({ widget: w }: { widget: Widget }) {
-  const { idToken } = useAuth();
   const scale = useWidgetFontScale();
   const rowHeight = ROW_HEIGHT * scale;
-  const [view, setView] = useState(() => loadView(w.id));
-  const [editingRange, setEditingRange] = useState(false);
-  const [ranged, setRanged] = useState<{ id: string; rows: Row[]; updatedAt: string } | null>(null);
-  const [failedRange, setFailedRange] = useState<string | null>(null);
+  const [period] = usePeriod();
   const [chartRef, size] = useElementSize<HTMLDivElement>();
   const [scrollTop, setScrollTop] = useState(0);
   const [hover, setHover] = useState<{ index: number; x: number } | null>(null);
-  useEffect(() => saveView(w.id, view), [w.id, view]);
 
-  const range = resolveRange(view.range, view, undefined, undefined);
-  const filtered = view.range !== "all";
-  const requestKey = `${w.id}|${range.from}|${range.to}`;
-  const rangeError = failedRange === requestKey;
-
-  // `w.data` cambia con cada refresco general (cada 30 s): se vuelve a pedir el
-  // rango para que la vista filtrada se mantenga al día igual que "Todo".
-  useEffect(() => {
-    if (!filtered || !idToken) return;
-    let cancelled = false;
-    const controller = new AbortController();
-    api.widgetData(idToken, w.id, { dateFrom: range.from, dateTo: range.to }, controller.signal)
-      .then(({ data }) => {
-        if (cancelled) return;
-        setRanged({ id: requestKey, rows: data.flatMap((row) => row.value === null ? [] : [{ key: row.label ?? "total", value: row.value }]), updatedAt: new Date().toISOString() });
-        setFailedRange(null);
-      })
-      .catch(() => { if (!cancelled) setFailedRange(requestKey); });
-    return () => { cancelled = true; controller.abort(); };
-  }, [filtered, idToken, w.id, range.from, range.to, requestKey, w.data]);
-
-  const loadingRange = filtered && !rangeError && ranged?.id !== requestKey;
-  const rows: Row[] = filtered ? (ranged?.id === requestKey ? ranged.rows : []) : (w.data ?? []);
-
-  function changeRange(preset: RangePreset) {
-    if (preset === "custom") {
-      setView((current) => ({ ...current, range: "custom", from: range.from, to: range.to }));
-      setEditingRange(true);
-    } else {
-      setView((current) => ({ ...current, range: preset }));
-      setEditingRange(false);
-    }
-    setHover(null);
-  }
-
-  const controls = (
-    <div className="chart-controls">
-      <RangePicker view={view} resolved={range} editing={editingRange} onChange={changeRange} onToggleEdit={() => setEditingRange((open) => !open)} />
-    </div>
-  );
-  const rangePanel = editingRange && view.range === "custom" && (
-    <RangePanel resolved={range} onFrom={(value) => setView((current) => ({ ...current, from: value }))} onTo={(value) => setView((current) => ({ ...current, to: value }))} onDone={() => setEditingRange(false)} />
-  );
+  // Las barras llegan agrupadas por categoría y ya vienen filtradas por el
+  // período global: `useCloudData` lo manda al backend en cada consulta.
+  const rows = w.data ?? [];
 
   const max = Math.max(...rows.map((row) => Math.abs(row.value)), 0) || 1;
   const additive = isAdditive(w);
@@ -116,19 +40,15 @@ export function BarChart({ widget: w }: { widget: Widget }) {
   const pointerX = (e: React.PointerEvent<HTMLElement>, list: Element | null) => e.clientX - (list?.getBoundingClientRect().left ?? 0);
 
   if (rows.length === 0) {
-    const message = rangeError ? "No se pudieron cargar los datos del rango" : loadingRange ? "Cargando…" : filtered ? "Sin datos en este rango" : "Sin datos para esta agrupación";
     return (
       <div className="bar-chart">
-        {controls}
-        <div className="bar-body"><div className="bar-list"><span className="widget-empty">{message}</span></div>{rangePanel}</div>
+        <div className="bar-body"><div className="bar-list"><span className="widget-empty">{period.preset === "all" ? "Sin datos para esta agrupación" : "Sin datos en este período"}</span></div></div>
       </div>
     );
   }
 
   return (
     <div className="bar-chart">
-      {rangeError && <div className="widget-data-notice" role="status">Datos del rango sin actualizar{ranged?.id === requestKey ? " · " + new Date(ranged.updatedAt).toLocaleString("es-ES") : ""}</div>}
-      {controls}
       <div
         className="bar-body"
         ref={chartRef}
@@ -170,7 +90,6 @@ export function BarChart({ widget: w }: { widget: Widget }) {
             extra={additive && total > 0 ? `${((activeRow.value / total) * 100).toLocaleString("es-AR", { maximumFractionDigits: 1 })}% del total` : undefined}
           />
         )}
-        {rangePanel}
       </div>
     </div>
   );

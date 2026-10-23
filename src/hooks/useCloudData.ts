@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { localDateKey } from "../lib/chartScale";
+import { periodRange, usePeriod, type PeriodFilter } from "../lib/periodFilter";
 import { api, type AgentLocation, type ApiActivationCode, type ApiAgent, type ApiTicket, type ApiWidget } from "../api/client";
 import { widgetDataFailure, widgetDataSuccess, type WidgetDataState } from "../lib/widgetDataState";
 import { useRequestScope } from "./useRequestScope";
@@ -52,6 +53,10 @@ export function useCloudData(idToken: string) {
   const [widgetStates, setWidgetStates] = useState<Record<string, WidgetDataState>>({});
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  // Período global de los widgets. Cambiarlo recrea `refresh`, y el efecto de abajo
+  // lo dispara de inmediato; `appliedPeriod` distingue ese cambio de un refresco normal.
+  const [period] = usePeriod();
+  const appliedPeriod = useRef<PeriodFilter | null>(null);
 
   // El onboarding necesita comprobar la conexión sin esperar tickets,
   // códigos, widgets ni consultas de Athena. Esta lectura separada también
@@ -92,11 +97,17 @@ export function useCloudData(idToken: string) {
       agentTask.finish();
       setCodes(codeResult.codes);
       setWidgets(widgetResult.widgets);
+      // Con otro período, los datos anteriores corresponden a otro rango: no se muestran mientras llegan los nuevos.
+      // Los widgets por hora no dependen del período (siempre hoy y ayer).
+      const periodChanged = appliedPeriod.current !== period;
+      appliedPeriod.current = period;
       setWidgetStates((previous) => Object.fromEntries(widgetResult.widgets.map((w) => [
-        w.widgetId, previous[w.widgetId] ?? { data: [], status: "loading" as const },
+        w.widgetId, (periodChanged && w.groupBy !== "hour" ? undefined : previous[w.widgetId]) ?? { data: [], status: "loading" as const },
       ])));
+      const range = periodRange(period);
+      const periodDates = range ? { dateFrom: range.from, dateTo: range.to } : undefined;
       const dataResults = await Promise.allSettled(widgetResult.widgets.map(async (w) =>
-        (await api.widgetData(idToken, w.widgetId, w.groupBy === "hour" ? HOURLY_RANGE() : undefined, task.signal)).data));
+        (await api.widgetData(idToken, w.widgetId, w.groupBy === "hour" ? HOURLY_RANGE() : periodDates, task.signal)).data));
       if (!task.isCurrent()) return;
       setWidgetStates((previous) => Object.fromEntries(widgetResult.widgets.map((w, index) => {
         const result = dataResults[index];
@@ -116,7 +127,7 @@ export function useCloudData(idToken: string) {
       agentTask.finish();
       task.finish();
     }
-  }, [idToken, scope]);
+  }, [idToken, scope, period]);
 
   const latestRefresh = useRef(refresh);
   useEffect(() => { latestRefresh.current = refresh; }, [refresh]);

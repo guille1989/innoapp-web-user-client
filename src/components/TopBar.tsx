@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../auth/AuthContext";
 import { THEME_LABELS, THEME_PREFERENCES, useTheme } from "../lib/theme";
+import { PeriodControl } from "./dashboard/PeriodControl";
 import { TextSizeControl } from "./dashboard/TextSizeControl";
 import { useFontLevel } from "./dashboard/fontScale";
 import type { AppView } from "./BottomNav";
@@ -57,6 +58,7 @@ export function TopBar({ active, onChange, onOpenGuide }: TopBarProps) {
         <button data-tour="view-agents" className={active === "robots" ? "active" : ""} onClick={() => onChange("robots")}>Agentes</button>
       </nav>
       <div className="header-tools">
+      {active === "dashboard" && <PeriodControl variant="header" />}
       <TextSizeControl className="glass header-text-size" level={fontLevel} onChange={setFontLevel} label="Tamaño del texto" />
       <button type="button" className="theme-toggle glass" onClick={() => setThemePreference(nextTheme)} aria-label={`Cambiar a tema ${THEME_LABELS[nextTheme].toLowerCase()}`} title={`Tema ${THEME_LABELS[nextTheme].toLowerCase()}`}>
         {theme === "dark" ? <IconSun /> : <IconMoon />}
@@ -74,6 +76,7 @@ export function TopBar({ active, onChange, onOpenGuide }: TopBarProps) {
                 ))}
               </div>
             </div>
+            {active === "dashboard" && <PeriodControl variant="popover" />}
             <TextSizeControl className="popover-text-size" level={fontLevel} onChange={setFontLevel} label="Tamaño del texto" />
             <button role="menuitem" onClick={() => { setOpen(false); onOpenGuide(); }}>Guía de la aplicación <span>?</span></button>
             <button role="menuitem" onClick={logout}>Cerrar sesión <span>↗</span></button>
