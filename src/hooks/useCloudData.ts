@@ -57,6 +57,10 @@ export function useCloudData(idToken: string) {
   // lo dispara de inmediato; `appliedPeriod` distingue ese cambio de un refresco normal.
   const [period] = usePeriod();
   const appliedPeriod = useRef<PeriodFilter | null>(null);
+  // Última lista de widgets y último resultado por (widget, período): al volver a un período ya
+  // visto se muestra de inmediato mientras se revalida, en vez de empezar de cero.
+  const widgetsRef = useRef<ApiWidget[]>([]);
+  const dataCache = useRef(new Map<string, WidgetDataState>());
 
   // El onboarding necesita comprobar la conexión sin esperar tickets,
   // códigos, widgets ni consultas de Athena. Esta lectura separada también
@@ -81,14 +85,57 @@ export function useCloudData(idToken: string) {
     const task = scope.start("refresh");
     const agentTask = scope.start("agents");
     try {
-      const [ticketResult, reviewResult, agentResult, codeResult, widgetResult] = await Promise.all([
+      const range = periodRange(period);
+      const periodDates = range ? { dateFrom: range.from, dateTo: range.to } : undefined;
+      // Los widgets por hora no dependen del período (siempre hoy y ayer).
+      const cacheKey = (w: ApiWidget) => `${w.widgetId}|${w.groupBy === "hour" ? "hour" : range ? `${range.from}|${range.to}` : "all"}`;
+      const loadingState = { data: [], status: "loading" as const };
+
+      // Con otro período los datos en pantalla son de otro rango. Se cambian YA, sin esperar a
+      // tickets/agentes: lo último que se vio para ese rango, o "Consultando datos…" si es nuevo.
+      if (appliedPeriod.current !== period) {
+        appliedPeriod.current = period;
+        const known = widgetsRef.current;
+        setWidgetStates((previous) => Object.fromEntries(known.map((w) => [
+          w.widgetId, (w.groupBy === "hour" ? previous[w.widgetId] : dataCache.current.get(cacheKey(w))) ?? loadingState,
+        ])));
+      }
+
+      // Los datos de cada widget se piden apenas se conoce la lista (no esperan al resto del
+      // refresco) y cada uno se publica al llegar: un widget lento no retiene a los rápidos.
+      const dataPromise = api.widgets(idToken, task.signal).then(async ({ widgets: list }) => {
+        if (!task.isCurrent()) return [];
+        widgetsRef.current = list;
+        setWidgets(list);
+        setWidgetStates((previous) => Object.fromEntries(list.map((w) => [
+          w.widgetId, previous[w.widgetId] ?? dataCache.current.get(cacheKey(w)) ?? loadingState,
+        ])));
+        return Promise.all(list.map(async (w) => {
+          try {
+            const { data } = await api.widgetData(idToken, w.widgetId, w.groupBy === "hour" ? HOURLY_RANGE() : periodDates, task.signal);
+            if (!task.isCurrent()) return true;
+            const state = widgetDataSuccess(data);
+            dataCache.current.set(cacheKey(w), state);
+            setWidgetStates((previous) => ({ ...previous, [w.widgetId]: state }));
+            return true;
+          } catch (err) {
+            if (!task.isCurrent()) return true;
+            const message = err instanceof Error ? err.message : "No se pudo consultar este widget";
+            setWidgetStates((previous) => ({ ...previous, [w.widgetId]: widgetDataFailure(previous[w.widgetId], message) }));
+            return false;
+          }
+        }));
+      });
+      dataPromise.catch(() => {}); // si falla antes de que se espere abajo, el error se maneja allí
+
+      const [ticketResult, reviewResult, agentResult, codeResult] = await Promise.all([
         api.tickets(idToken, {}, task.signal),
         fetchAllNeedsReview(idToken, task.signal),
         api.agents(idToken, AbortSignal.any([task.signal, agentTask.signal])).catch((err) => {
           if (!agentTask.isCurrent()) return null;
           throw err;
         }),
-        api.activationCodes(idToken, task.signal), api.widgets(idToken, task.signal),
+        api.activationCodes(idToken, task.signal),
       ]);
       if (!task.isCurrent()) return;
       setTickets(ticketResult.tickets);
@@ -96,26 +143,9 @@ export function useCloudData(idToken: string) {
       if (agentTask.isCurrent() && agentResult) setAgents((current) => mergeAgentsKeepingNewest(current, agentResult.agents));
       agentTask.finish();
       setCodes(codeResult.codes);
-      setWidgets(widgetResult.widgets);
-      // Con otro período, los datos anteriores corresponden a otro rango: no se muestran mientras llegan los nuevos.
-      // Los widgets por hora no dependen del período (siempre hoy y ayer).
-      const periodChanged = appliedPeriod.current !== period;
-      appliedPeriod.current = period;
-      setWidgetStates((previous) => Object.fromEntries(widgetResult.widgets.map((w) => [
-        w.widgetId, (periodChanged && w.groupBy !== "hour" ? undefined : previous[w.widgetId]) ?? { data: [], status: "loading" as const },
-      ])));
-      const range = periodRange(period);
-      const periodDates = range ? { dateFrom: range.from, dateTo: range.to } : undefined;
-      const dataResults = await Promise.allSettled(widgetResult.widgets.map(async (w) =>
-        (await api.widgetData(idToken, w.widgetId, w.groupBy === "hour" ? HOURLY_RANGE() : periodDates, task.signal)).data));
+      const dataOk = await dataPromise;
       if (!task.isCurrent()) return;
-      setWidgetStates((previous) => Object.fromEntries(widgetResult.widgets.map((w, index) => {
-        const result = dataResults[index];
-        return [w.widgetId, result.status === "fulfilled"
-          ? widgetDataSuccess(result.value)
-          : widgetDataFailure(previous[w.widgetId], result.reason instanceof Error ? result.reason.message : "No se pudo consultar este widget")];
-      })));
-      setError(dataResults.some((result) => result.status === "rejected") ? "No se pudieron actualizar los datos de uno o más widgets" : null);
+      setError(dataOk.includes(false) ? "No se pudieron actualizar los datos de uno o más widgets" : null);
     } catch (err) {
       if (task.isCurrent()) {
         const message = err instanceof Error ? err.message : String(err);
