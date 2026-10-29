@@ -303,3 +303,10 @@ button { border: 0; background: none; cursor: pointer; }
 .ai-chat-tools .ai-send { width: 40px; height: 40px; border-radius: 50%; }
 .ai-chat-tools .ai-send:disabled { opacity: .4; cursor: default; }
 @media (pointer: coarse) { .ai-chat-input textarea { font-size: max(16px, calc(14px * var(--afs, 1))); } }
+.msg-table-wrap { max-width: 100%; margin: 8px 0; overflow-x: auto; border: 1px solid var(--border); border-radius: 9px; }
+.msg-table { width: 100%; border-collapse: collapse; font-size: inherit; line-height: 1.4; }
+.msg-table th,.msg-table td { padding: 6px 10px; border-bottom: 1px solid var(--border); }
+.msg-table th { position: sticky; top: 0; background: rgba(var(--ink-rgb),.06); color: var(--muted); font-weight: 700; white-space: nowrap; }
+.msg-table td { font-variant-numeric: tabular-nums; }
+.msg-table tbody tr:last-child td { border-bottom: 0; }
+.msg-table tbody tr:hover td { background: rgba(var(--ink-rgb),.035); }
