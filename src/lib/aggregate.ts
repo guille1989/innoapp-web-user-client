@@ -19,6 +19,7 @@ const GROUP_KEY: Record<GroupField, (e: BusinessEvent) => string> = {
   status: (e) => e.meta.label,
   parsedBy: () => "Sin dato",
   description: () => "Sin dato",
+  customer: () => "Sin dato",
   day: (e) => new Date(e.ts).toISOString().slice(0, 10),
   // Hora local, igual que las claves "YYYY-MM-DD HH" que arma el backend con ?tz=.
   hour: (e) => {
