@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { AGG_LABELS, FIELD_LABELS, GROUP_LABELS } from "../../data/widgetLabels";
 import { IconBar, IconDonut, IconKpi, IconLine } from "../icons";
+import type { ApiAgent } from "../../api/client";
 import type { Aggregation, AggregatableField, GroupField, Widget, WidgetType } from "../../types";
 
 interface WidgetBuilderSheetProps {
   open: boolean;
   onClose: () => void;
   onCreate: (cfg: Omit<Widget, "id">) => Promise<void>;
+  agents: ApiAgent[];
 }
 
 const TYPE_OPTIONS: Array<{ type: WidgetType; label: string; icon: () => React.ReactElement }> = [
@@ -20,13 +22,14 @@ const FIELD_OPTIONS: AggregatableField[] = ["event_count", "total", "quantity", 
 const AGG_OPTIONS: Aggregation[] = ["sum", "avg", "max", "min", "count"];
 const GROUP_OPTIONS: GroupField[] = ["port", "agent", "status", "parsedBy", "description", "customer"];
 
-export function WidgetBuilderSheet({ open, onClose, onCreate }: WidgetBuilderSheetProps) {
+export function WidgetBuilderSheet({ open, onClose, onCreate, agents }: WidgetBuilderSheetProps) {
   const [type, setType] = useState<WidgetType>("kpi");
   const [title, setTitle] = useState("");
   const [field, setField] = useState<AggregatableField>("event_count");
   const [agg, setAgg] = useState<Aggregation>("sum");
   const [group, setGroup] = useState<GroupField>("agent");
   const [timeAxis, setTimeAxis] = useState<"day" | "hour">("day");
+  const [agentId, setAgentId] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,6 +40,7 @@ export function WidgetBuilderSheet({ open, onClose, onCreate }: WidgetBuilderShe
     setAgg("sum");
     setGroup("agent");
     setTimeAxis("day");
+    setAgentId("");
   }
 
   function handleClose() {
@@ -47,14 +51,16 @@ export function WidgetBuilderSheet({ open, onClose, onCreate }: WidgetBuilderShe
   async function handleCreate() {
     if (saving) return;
     const groupVal = type === "kpi" ? null : type === "line" ? timeAxis : group;
+    const branch = type === "kpi" ? agents.find((a) => a.agentId === agentId) : undefined;
     const autoTitle =
       FIELD_LABELS[field] +
       (agg && field !== "event_count" ? ` (${AGG_LABELS[agg].toLowerCase()})` : "") +
-      (groupVal ? ` por ${GROUP_LABELS[groupVal].toLowerCase()}` : "");
+      (groupVal ? ` por ${GROUP_LABELS[groupVal].toLowerCase()}` : "") +
+      (branch ? ` — ${branch.name}` : "");
     setSaving(true);
     setError(null);
     try {
-      await onCreate({ type, title: title.trim() || autoTitle, field, agg, group: groupVal });
+      await onCreate({ type, title: title.trim() || autoTitle, field, agg, group: groupVal, ...(branch ? { agentId: branch.agentId } : {}) });
       handleClose();
     } catch (err) {
       if (!(err instanceof DOMException && err.name === "AbortError")) setError(err instanceof Error ? err.message : "No se pudo crear el widget");
@@ -130,6 +136,22 @@ export function WidgetBuilderSheet({ open, onClose, onCreate }: WidgetBuilderShe
               {AGG_OPTIONS.map((a) => (
                 <option key={a} value={a}>
                   {AGG_LABELS[a]}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {type === "kpi" && agents.length > 0 && (
+          <div className="field">
+            <label className="field-label" htmlFor="wAgent">
+              Sucursal
+            </label>
+            <select id="wAgent" className="select" value={agentId} onChange={(e) => setAgentId(e.target.value)}>
+              <option value="">Todas las sucursales</option>
+              {agents.map((a) => (
+                <option key={a.agentId} value={a.agentId}>
+                  {a.name}
                 </option>
               ))}
             </select>

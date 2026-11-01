@@ -78,6 +78,7 @@ export function AuthenticatedApp() {
         field: VALID_FIELDS.has(w.metric.field as Widget["field"]) ? w.metric.field as Widget["field"] : "event_count",
         agg: w.metric.aggregation,
         group,
+        agentId: w.filters?.agentId,
         keyLabels: group === "agent" ? agentLabels : undefined,
         data: cloud.widgetData[w.widgetId]?.flatMap((row) => row.value === null ? [] : [{ key: row.label ?? "total", value: row.value, sampleCount: row.sampleCount }]) ?? [],
         dataStatus: cloud.widgetStates[w.widgetId]?.status ?? "loading",
@@ -114,6 +115,7 @@ export function AuthenticatedApp() {
       visualization: cfg.type,
       metric: { field: cfg.field, aggregation: cfg.field === "event_count" ? "count" : cfg.agg },
       ...(cfg.group ? { groupBy: cfg.group } : {}),
+      ...(cfg.agentId ? { filters: { agentId: cfg.agentId } } : {}),
     });
   }
 
@@ -156,7 +158,7 @@ export function AuthenticatedApp() {
       <footer className="app-footer">Powered by <strong>InnoApp</strong></footer>
       <Overlay open={activeSheet !== null} onClick={() => setActiveSheet(null)} />
       <AiSheet hideDock open={activeSheet === "ai"} onOpen={() => setActiveSheet("ai")} onClose={() => setActiveSheet(null)} onCreateWidget={addWidget} idToken={idToken!} businessName={onboarding.me?.businessName ?? ""} onReportSaved={() => void reports.refresh()} />
-      <WidgetBuilderSheet open={activeSheet === "builder"} onClose={() => setActiveSheet(null)} onCreate={addWidget} />
+      <WidgetBuilderSheet open={activeSheet === "builder"} onClose={() => setActiveSheet(null)} onCreate={addWidget} agents={cloud.agents} />
       {onboardingState && !onboardingState.completedAt && (
         <OnboardingReminder connected={connected} hasTickets={cloud.tickets.length > 0} hasWidgets={cloud.widgets.length > 0} onContinue={() => setShowOnboarding(true)} />
       )}

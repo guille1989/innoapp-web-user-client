@@ -42,7 +42,7 @@ export interface ApiWidget {
   visualization: "kpi" | "bar" | "line" | "donut";
   metric: { field: string; aggregation: "sum" | "avg" | "max" | "min" | "count" };
   groupBy?: string;
-  filters?: { dateFrom?: string; dateTo?: string; port?: string; status?: ApiTicket["status"]; descriptionContains?: string };
+  filters?: { dateFrom?: string; dateTo?: string; port?: string; agentId?: string; status?: ApiTicket["status"]; descriptionContains?: string };
   createdAt: string;
 }
 export type ApiWidgetData = Array<{ label?: string; value: number | null; sampleCount?: number }>;
