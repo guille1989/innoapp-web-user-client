@@ -20,7 +20,8 @@ export interface VentaEvent extends BusinessEventBase {
   eventType: "venta";
   monto: number;
   items: number;
-  metodoPago: "Efectivo" | "Tarjeta" | "Sin dato";
+  /** Fecha límite de pago (YYYY-MM-DD); solo las facturas electrónicas la traen. */
+  vence?: string;
 }
 
 export interface DevolucionEvent extends BusinessEventBase {

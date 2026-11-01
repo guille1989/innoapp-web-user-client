@@ -10,6 +10,7 @@ export interface ApiTicket {
   tax?: number;
   discount?: number;
   tip?: number;
+  paymentDueDate?: string;
   failReason?: string;
   parsedBy?: string;
   reviewedBy?: string;

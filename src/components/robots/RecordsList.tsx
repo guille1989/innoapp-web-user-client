@@ -14,6 +14,12 @@ interface RecordsListProps {
   latestEventId: string | null;
 }
 
+/** "2026-10-22" → "22/10/2026", sin pasar por Date para no correr el día por zona horaria. */
+function fmtDueDate(iso: string) {
+  const [year, month, day] = iso.split("-");
+  return `${day}/${month}/${year}`;
+}
+
 function fieldChips(ev: BusinessEvent) {
   if (ev.eventType === "venta") {
     return (
@@ -24,9 +30,11 @@ function fieldChips(ev: BusinessEvent) {
         <span className="record-chip">
           items: <b>{ev.items}</b>
         </span>
-        <span className="record-chip">
-          pago: <b>{ev.metodoPago}</b>
-        </span>
+        {ev.vence && (
+          <span className="record-chip">
+            vence: <b>{fmtDueDate(ev.vence)}</b>
+          </span>
+        )}
       </>
     );
   }

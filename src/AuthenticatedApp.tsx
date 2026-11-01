@@ -33,7 +33,7 @@ function toEvent(ticket: ApiTicket): BusinessEvent {
     meta: { label: ticket.status, color: "var(--teal)", bg: "var(--teal-dim)" },
     monto: ticket.total ?? 0,
     items: ticket.items?.filter((item) => !item.voided).reduce((sum, item) => sum + (item.quantity ?? 0), 0) ?? 0,
-    metodoPago: "Sin dato",
+    vence: ticket.paymentDueDate,
   };
 }
 
