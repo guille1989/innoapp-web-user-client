@@ -51,7 +51,7 @@ export function WidgetBuilderSheet({ open, onClose, onCreate, agents }: WidgetBu
   async function handleCreate() {
     if (saving) return;
     const groupVal = type === "kpi" ? null : type === "line" ? timeAxis : group;
-    const branch = type === "kpi" ? agents.find((a) => a.agentId === agentId) : undefined;
+    const branch = agents.find((a) => a.agentId === agentId);
     const autoTitle =
       FIELD_LABELS[field] +
       (agg && field !== "event_count" ? ` (${AGG_LABELS[agg].toLowerCase()})` : "") +
@@ -142,7 +142,7 @@ export function WidgetBuilderSheet({ open, onClose, onCreate, agents }: WidgetBu
           </div>
         )}
 
-        {type === "kpi" && agents.length > 0 && (
+        {agents.length > 0 && (
           <div className="field">
             <label className="field-label" htmlFor="wAgent">
               Sucursal

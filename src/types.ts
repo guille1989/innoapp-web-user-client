@@ -50,7 +50,7 @@ export interface Widget {
   field: AggregatableField;
   agg: Aggregation;
   group: GroupField | null;
-  /** Solo KPI: limita el número a una sucursal (agente). Sin valor, suma todas. */
+  /** Limita el widget a una sucursal (agente). Sin valor, incluye todas. */
   agentId?: string;
   data?: AggregateRow[];
   dataStatus?: "loading" | "ready" | "error" | "stale";
