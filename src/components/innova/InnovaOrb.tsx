@@ -28,6 +28,8 @@ interface InnovaOrbProps {
   state: OrbState;
   /** 0-1: volumen de la voz (de quien habla o de quien escucha), para que el núcleo lata con ella. */
   level?: number;
+  /** Igual que `level`, pero leído en cada fotograma sin provocar renders (lo escriben los hooks de voz). */
+  levelRef?: { current: number };
 }
 
 /**
@@ -35,11 +37,11 @@ interface InnovaOrbProps {
  * en oscuro suma luz sobre el fondo; en claro dibuja con tinta, porque la luz sumada sobre blanco
  * no se vería. Respeta `prefers-reduced-motion` y se detiene solo cuando la pestaña no se ve.
  */
-export function InnovaOrb({ state, level = 0 }: InnovaOrbProps) {
+export function InnovaOrb({ state, level = 0, levelRef }: InnovaOrbProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // El bucle de dibujo lee siempre lo último desde acá, sin reiniciarse en cada cambio de estado.
-  const live = useRef({ state, level });
-  live.current = { state, level };
+  const live = useRef({ state, level, levelRef });
+  live.current = { state, level, levelRef };
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -75,7 +77,8 @@ export function InnovaOrb({ state, level = 0 }: InnovaOrbProps) {
       if (width === 0 || height === 0) return;      // pestaña oculta (display: none): nada que dibujar
       const dt = Math.min(0.05, (t - last) / 1000); last = t;
       const motion = reduceMotion ? 0.25 : 1;
-      const { state: current, level: input } = live.current;
+      const { state: current, level: staticLevel, levelRef: liveLevel } = live.current;
+      const input = liveLevel ? liveLevel.current : staticLevel;
 
       const target = colors[current];
       for (let k = 0; k < 3; k++) color[k] += (target[k] - color[k]) * Math.min(1, dt * 4);

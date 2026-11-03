@@ -31,6 +31,22 @@ export function greetingWord(hour: number): string {
   return "Buenas noches";
 }
 
+// Más de tres avisos en voz alta es un monólogo: se leen los más urgentes y el resto queda en pantalla.
+const MAX_SPOKEN_MATTERS = 3;
+
+/** Lo que Innova dice al tocar "Escuchar" en el saludo: el saludo y los avisos nuevos más urgentes (el orden de `matters` ya es por gravedad). */
+export function briefingSpoken(greeting: { headline: string; sub: string }, matters: readonly ApiMatter[]): string {
+  const unseen = matters.filter((m) => m.status === "new");
+  const spoken = unseen.slice(0, MAX_SPOKEN_MATTERS).map((m) => m.spoken || `${m.title}.`);
+  const rest = unseen.length - spoken.length;
+  return [
+    greeting.headline,
+    unseen.length === 0 ? greeting.sub : "",
+    ...spoken,
+    rest > 0 ? `Y ${rest === 1 ? "hay 1 más" : `hay ${rest} más`} en pantalla.` : "",
+  ].filter(Boolean).join(" ");
+}
+
 /** Saludo de la portada: determinista, con el conteo de avisos que la persona todavía no vio. */
 export function greetingFor(now: Date, matters: readonly ApiMatter[]): { headline: string; sub: string } {
   const unseen = countUnseen(matters);

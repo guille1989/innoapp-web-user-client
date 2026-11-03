@@ -1,6 +1,20 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { greetingFor, greetingWord, orbStateFor } from "../src/lib/innova.ts";
+import { briefingSpoken, greetingFor, greetingWord, orbStateFor } from "../src/lib/innova.ts";
+
+const spokenMatter = (id, spoken, status = "new") => ({ id, severity: "warn", status, title: `T${id}`, spoken });
+const greeting = { headline: "Buenos días. Soy Innova.", sub: "Hay 2 cosas que revisar. Pregúntame." };
+
+test("el resumen hablado lee el saludo y los avisos nuevos más urgentes, y avisa del resto", () => {
+  const text = briefingSpoken(greeting, [spokenMatter(1, "Uno."), spokenMatter(2, "Dos."), spokenMatter(3, "Tres."), spokenMatter(4, "Cuatro."), spokenMatter(5, "Cinco.")]);
+  assert.equal(text, "Buenos días. Soy Innova. Uno. Dos. Tres. Y hay 2 más en pantalla.");
+});
+
+test("el resumen hablado ignora lo ya visto y, sin avisos, dice la frase de que todo está en orden", () => {
+  assert.equal(briefingSpoken(greeting, [spokenMatter(1, "Uno.", "seen")]), "Buenos días. Soy Innova. Hay 2 cosas que revisar. Pregúntame.");
+  assert.equal(briefingSpoken(greeting, [spokenMatter(1, "Uno.")]), "Buenos días. Soy Innova. Uno.");
+  assert.equal(briefingSpoken(greeting, [spokenMatter(1, "Uno."), spokenMatter(2, "Dos."), spokenMatter(3, "Tres."), spokenMatter(4, "Cuatro.")]).endsWith("Y hay 1 más en pantalla."), true);
+});
 
 const matter = (overrides) => ({ id: "m", severity: "warn", status: "new", ...overrides });
 
