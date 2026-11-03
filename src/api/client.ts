@@ -78,6 +78,8 @@ export interface ApiMe {
   createdAt: string;
   /** null identifica una cuenta anterior al onboarding. */
   onboarding: ApiOnboardingState | null;
+  /** Interruptores de funciones en beta de este negocio. Ausente (backend anterior) = todo apagado. */
+  features?: { advisorView?: boolean };
 }
 export type OnboardingAction = "start" | "defer" | "complete" | "complete-product-tour" | "create-starter-dashboard";
 

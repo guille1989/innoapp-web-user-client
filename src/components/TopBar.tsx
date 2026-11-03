@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../auth/AuthContext";
+import { ASSISTANT_NAME } from "../lib/innova";
 import { THEME_LABELS, THEME_PREFERENCES, useTheme } from "../lib/theme";
 import { PeriodControl } from "./dashboard/PeriodControl";
 import { TextSizeControl } from "./dashboard/TextSizeControl";
@@ -12,6 +13,8 @@ interface TopBarProps {
   onOpenGuide: () => void;
   /** Avisos que la persona todavía no vio: se muestran como contador en la pestaña IA. */
   attentionCount?: number;
+  /** Interruptor de la beta: solo los negocios con la vista nueva ven la pestaña de Innova. */
+  showAdvisorView?: boolean;
 }
 
 function IconSun() {
@@ -31,7 +34,7 @@ function IconMoon() {
   );
 }
 
-export function TopBar({ active, onChange, onOpenGuide, attentionCount = 0 }: TopBarProps) {
+export function TopBar({ active, onChange, onOpenGuide, attentionCount = 0, showAdvisorView = false }: TopBarProps) {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -65,6 +68,7 @@ export function TopBar({ active, onChange, onOpenGuide, attentionCount = 0 }: To
         </button>
         <button data-tour="view-data"className={active === "dashboard" ? "active" : ""} onClick={() => onChange("dashboard")}>Datos</button>
         <button data-tour="view-agents" className={active === "robots" ? "active" : ""} onClick={() => onChange("robots")}>Agentes</button>
+        {showAdvisorView && <button className={active === "innova" ? "active" : ""} onClick={() => onChange("innova")}>{ASSISTANT_NAME}<span className="beta-tag">beta</span></button>}
       </nav>
       <div className="header-tools">
       {active === "dashboard" && <PeriodControl variant="header" />}

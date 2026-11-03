@@ -9,6 +9,7 @@ import { useAdvisorMatters } from "./hooks/useAdvisorMatters";
 import { useReports } from "./hooks/useReports";
 import { AiSheet } from "./components/ai/AiSheet";
 import { AiChatView } from "./components/ai/AiChatView";
+import { InnovaView } from "./components/innova/InnovaView";
 import { useCloudData } from "./hooks/useCloudData";
 import { useOnboarding } from "./hooks/useOnboarding";
 import { useAuth } from "./auth/AuthContext";
@@ -94,6 +95,8 @@ export function AuthenticatedApp() {
   }, [cloud.widgets, cloud.widgetData, cloud.widgetStates, cloud.agents]);
   const latestEventId = events.at(-1)?.id ?? null;
   const connected = cloud.agents.length > 0;
+  // Beta de Innova: el backend la enciende por negocio (features.advisorView); sin eso, nada cambia.
+  const advisorView = onboarding.me?.features?.advisorView === true;
 
   useEffect(() => {
     const state = onboarding.me?.onboarding;
@@ -144,7 +147,7 @@ export function AuthenticatedApp() {
 
   return (
     <div className="app-root">
-      <TopBar active={view} onChange={setView} onOpenGuide={startTour} attentionCount={advisor.newCount} />
+      <TopBar active={view} onChange={setView} onOpenGuide={startTour} attentionCount={advisor.newCount} showAdvisorView={advisorView} />
       <main className="app-stage">
         {(cloud.error || cloud.loading) && (
           <div className={`api-banner glass${cloud.error ? " error" : ""}`}>
@@ -154,6 +157,18 @@ export function AuthenticatedApp() {
           </div>
         )}
         <AiChatView active={view === "ai"} onCreateWidget={addWidget} idToken={idToken!} businessName={onboarding.me?.businessName ?? ""} onReportSaved={() => void reports.refresh()} attention={{ matters: advisor.matters, onMark: (id, status) => { void advisor.mark(id, status); } }} />
+        {advisorView && (
+          <InnovaView
+            active={view === "innova"}
+            idToken={idToken!}
+            businessName={onboarding.me?.businessName ?? ""}
+            onCreateWidget={addWidget}
+            onReportSaved={() => void reports.refresh()}
+            matters={advisor.matters}
+            onMark={(id, status) => { void advisor.mark(id, status); }}
+            onOpenClassic={() => setView("ai")}
+          />
+        )}
         <DashboardView active={view === "dashboard"} widgets={widgets} events={events} onRemoveWidget={(id) => { void cloud.deleteWidget(id).catch(() => {}); }} onOpenBuilder={() => setActiveSheet("builder")} reports={reports.reports} idToken={idToken!} businessName={onboarding.me?.businessName ?? ""} onDeleteReport={reports.remove} hasMoreReports={reports.hasMore} loadingMoreReports={reports.loadingMore} onLoadMoreReports={() => { void reports.loadMore(); }} />
         <RobotsView active={view === "robots"} events={events} latestEventId={latestEventId} robots={robots} codes={cloud.codes} tickets={cloud.reviewTickets} idToken={idToken!} onUpdateLocation={cloud.updateAgentLocation} onReviewTicket={cloud.reviewTicket} />
       </main>
