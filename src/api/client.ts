@@ -57,7 +57,9 @@ export interface ApiReportSection {
   previous?: number | null;
 }
 export interface ApiReport { title: string; generatedAt: string; sections: ApiReportSection[] }
-export interface ApiAssistantAnswer { answer: string; report?: ApiReport; reportId?: string }
+/** Widget que el asistente validó en el servidor y que el cliente crea por `POST /widgets`. */
+export type ApiWidgetDraft = Omit<ApiWidget, "widgetId" | "createdAt">;
+export interface ApiAssistantAnswer { answer: string; report?: ApiReport; reportId?: string; widget?: ApiWidgetDraft }
 export interface ApiReportListItem { reportId: string; title: string; createdAt: string; expiresAt: string }
 export interface ApiStoredReport { reportId: string; summary: string; report: ApiReport; createdAt: string; expiresAt: string }
 export interface ApiAssistantHistoryTurn { role: "user" | "assistant"; text: string }

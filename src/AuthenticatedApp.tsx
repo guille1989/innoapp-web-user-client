@@ -82,6 +82,7 @@ export function AuthenticatedApp() {
         agg: w.metric.aggregation,
         group,
         agentId: w.filters?.agentId,
+        descriptionContains: w.filters?.descriptionContains,
         keyLabels: group === "agent" ? agentLabels : undefined,
         data: cloud.widgetData[w.widgetId]?.flatMap((row) => row.value === null ? [] : [{ key: row.label ?? "total", value: row.value, sampleCount: row.sampleCount }]) ?? [],
         dataStatus: cloud.widgetStates[w.widgetId]?.status ?? "loading",
@@ -120,7 +121,9 @@ export function AuthenticatedApp() {
       visualization: cfg.type,
       metric: { field: cfg.field, aggregation: cfg.field === "event_count" ? "count" : cfg.agg },
       ...(cfg.group ? { groupBy: cfg.group } : {}),
-      ...(cfg.agentId ? { filters: { agentId: cfg.agentId } } : {}),
+      ...(cfg.agentId || cfg.descriptionContains
+        ? { filters: { ...(cfg.agentId ? { agentId: cfg.agentId } : {}), ...(cfg.descriptionContains ? { descriptionContains: cfg.descriptionContains } : {}) } }
+        : {}),
     });
   }
 

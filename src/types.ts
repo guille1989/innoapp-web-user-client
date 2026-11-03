@@ -52,6 +52,8 @@ export interface Widget {
   group: GroupField | null;
   /** Limita el widget a una sucursal (agente). Sin valor, incluye todas. */
   agentId?: string;
+  /** Limita el widget a los productos cuyo nombre contiene este texto. */
+  descriptionContains?: string;
   data?: AggregateRow[];
   dataStatus?: "loading" | "ready" | "error" | "stale";
   dataError?: string;

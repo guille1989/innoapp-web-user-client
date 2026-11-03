@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { api, ApiError, type ApiAssistantHistoryTurn, type ApiConversation, type ApiConversationSummary } from "../../api/client";
+import { api, ApiError, type ApiAssistantHistoryTurn, type ApiConversation, type ApiConversationSummary, type ApiWidgetDraft } from "../../api/client";
 import { respondLocally } from "../../lib/aiAssistant";
 import {
   conversationCreatedAt, conversationSignature, deriveTitle, newConversationId, readActiveConversation, toStoredMessages, writeActiveConversation, type ChatMessage,
@@ -25,6 +25,18 @@ export const SUGGESTED = [
 ];
 
 let msgSeq = 1;
+
+function draftToWidget(draft: ApiWidgetDraft): Omit<Widget, "id"> {
+  return {
+    type: draft.visualization,
+    title: draft.name,
+    field: draft.metric.field as Widget["field"],
+    agg: draft.metric.aggregation,
+    group: (draft.groupBy ?? null) as Widget["group"],
+    ...(draft.filters?.agentId ? { agentId: draft.filters.agentId } : {}),
+    ...(draft.filters?.descriptionContains ? { descriptionContains: draft.filters.descriptionContains } : {}),
+  };
+}
 
 const greeting = (): ChatMessage => ({ id: msgSeq++, role: "ai", text: "Hola, soy tu asistente de datos. Puedo analizar las lecturas de tus agentes y crear widgets por ti.", transient: true });
 
@@ -183,10 +195,22 @@ export function useAssistantChat({ idToken, onCreateWidget, onReportSaved, persi
     setNow(Date.now());
     setUsage((u) => (u.minute === currentMinute() ? { minute: u.minute, count: u.count + 1 } : { minute: currentMinute(), count: 1 }));
     try {
-      const { answer, report, reportId } = await api.assistantAsk(idToken, value, history, task.signal);
+      const { answer, report, reportId, widget } = await api.assistantAsk(idToken, value, history, task.signal);
       if (!task.isCurrent()) return;
-      setTyping(false);
       if (reportId) onReportSaved();
+      // El servidor ya validó el widget con una consulta real; se crea por la ruta normal para que el tablero se refresque.
+      if (widget) {
+        try {
+          await onCreateWidget(draftToWidget(widget));
+        } catch (err) {
+          if (!task.isCurrent()) return;
+          setTyping(false);
+          pushAiMessage({ text: err instanceof Error ? err.message : "No se pudo crear el widget.", transient: true });
+          return;
+        }
+        if (!task.isCurrent()) return;
+      }
+      setTyping(false);
       pushAiMessage({ text: answer, ...(report ? { report } : {}), ...(reportId ? { reportId } : {}) });
       const newTurns: ApiAssistantHistoryTurn[] = [
         { role: "user", text: value },

@@ -21,8 +21,27 @@ const GROUP_RE = /agente|robot|puerto|perif[eé]rico|estado|parser|parseo|produc
 // Barras (el default de cualquier "gráfica").
 const DONUT_RE = /dona|\bpie\b|torta|pastel|queso|circular|proporci[oó]n|distribuci[oó]n/;
 
+const SUBJECT_RE = /sucursal|sede|local|tienda/;
+const TIME_RE = /\bhoras?\b|\bhorari[oa]s?\b|\bd[ií]as?\b|\bsemanas?\b|\bmes(es)?\b|\btiempo\b|fecha|evoluci[oó]n|tendencia/;
+// Relleno de una orden simple ("hazme un kpi de ventas por sucursal"): verbos de pedido,
+// artículos y conectores. Lo que no sea esto ni vocabulario conocido es una condición.
+const FILLER_RE =
+  /^(un|una|unos|unas|el|la|los|las|lo|de|del|con|por|en|para|y|o|a|al|me|mi|mis|te|que|hazme|haz|hacer|hazlo|hazla|crea|crear|creame|ponme|pon|ponlo|ponla|agrega|agregar|a[ñn]ade|a[ñn]adir|quiero|ver|dame|muestra|mostrar|tipo|favor|conteo|n[uú]mero|tickets?|lecturas?|dashboard|tablero|ahora|tambi[eé]n|este|esta|ese|esa|eso|esto|mas|más)$/;
+
+/**
+ * Una orden con condiciones ("solo café con leche", "en la sucursal Sol") no cabe
+ * en este atajo: crearía el widget sin ellas y diría que quedó listo. Si queda
+ * cualquier palabra que no sea relleno ni vocabulario conocido, la pregunta va
+ * al asistente, que sí aplica filtros.
+ */
+function hasUnknownConditions(q: string): boolean {
+  const words = q.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+  return words.some((word) => ![FILLER_RE, VIZ_RE, FIELD_RE, GROUP_RE, AVG_RE, DONUT_RE, SUBJECT_RE, TIME_RE].some((re) => re.test(word)));
+}
+
 export function parseWidgetIntent(q: string, previous?: string): WidgetIntent | null {
   if (!VIZ_RE.test(q)) return null;
+  if (hasUnknownConditions(q)) return null;
 
   // "ponme en un widget" no dice de qué: el tema viene de la pregunta anterior
   // ("quiero ver el ticket medio"). Sin esto caía en Barras de tickets por agente.
