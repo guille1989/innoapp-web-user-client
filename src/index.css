@@ -342,7 +342,7 @@ button { border: 0; background: none; cursor: pointer; }
 .innova-beta em { margin-left: 4px; padding: 1px 6px; border-radius: 999px; background: rgba(var(--violet-rgb), .18); color: var(--violet); font-style: normal; font-size: .85em; }
 .innova-link { color: var(--muted); font-size: calc(12px * var(--afs, 1)); text-decoration: underline; text-underline-offset: 3px; transition: .15s; }
 .innova-link:hover { color: var(--teal); }
-.innova-orb { flex: none; width: min(100%, 400px); height: min(38vh, 400px); }
+.innova-orb { display: block; width: 100%; height: 100%; }
 .innova-status { margin: 0; min-height: 18px; color: var(--teal); font-size: calc(11px * var(--afs, 1)); font-weight: 600; letter-spacing: .14em; text-transform: uppercase; text-align: center; }
 .innova-greeting { margin: 6px 0 0; font-size: calc(clamp(18px, 4vw, 24px) * var(--afs, 1)); font-weight: 700; letter-spacing: -.01em; text-align: center; }
 .innova-sub { margin: 6px 0 14px; max-width: 560px; color: var(--muted); font-size: calc(13.5px * var(--afs, 1)); line-height: 1.55; text-align: center; }
@@ -361,9 +361,10 @@ button { border: 0; background: none; cursor: pointer; }
 .innova-status[data-state="alert"] { color: var(--amber); }
 /* El contenedor se desplaza; sus hijos no se comprimen (una respuesta con tabla quedaba en una línea). */
 .innova-scroll > * { flex-shrink: 0; }
-.innova.has-exchange .innova-orb { height: min(24vh, 240px); }
+.innova.has-exchange .innova-orb-btn { height: min(24vh, 240px); }
 /* Innova: voz (el núcleo es también el botón de hablar). */
-.innova-orb-btn { flex: none; display: grid; place-items: center; padding: 0; border-radius: 50%; cursor: pointer; background: transparent; }
+/* El botón fija el tamaño y el canvas lo llena: si el botón midiera "lo que mida su contenido", una vista montada oculta dejaba el canvas en 0 px para siempre. */
+.innova-orb-btn { flex: none; display: block; width: min(100%, 400px); height: min(38vh, 400px); padding: 0; border-radius: 50%; cursor: pointer; background: transparent; }
 .innova-orb-btn:focus-visible { outline: 2px solid var(--teal); outline-offset: 4px; }
 .innova-error { margin: 4px 0 0; max-width: 560px; color: var(--amber); font-size: calc(12.5px * var(--afs, 1)); text-align: center; }
 .innova-question.live { color: var(--text); }

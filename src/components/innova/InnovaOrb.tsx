@@ -60,6 +60,7 @@ export function InnovaOrb({ state, level = 0, levelRef }: InnovaOrbProps) {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const rect = canvas.getBoundingClientRect();
       width = rect.width; height = rect.height;
+      if (width === 0 || height === 0) return;   // oculto: no se encoge el lienzo; se redibuja al volver a verse
       canvas.width = Math.round(width * dpr); canvas.height = Math.round(height * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
