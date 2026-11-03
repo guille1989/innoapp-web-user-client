@@ -81,6 +81,29 @@ export interface ApiMe {
 }
 export type OnboardingAction = "start" | "defer" | "complete" | "complete-product-tour" | "create-starter-dashboard";
 
+export type ApiMatterSeverity = "info" | "warn" | "critical";
+export type ApiMatterStatus = "new" | "seen" | "dismissed" | "resolved";
+/** Un aviso del asesor del negocio (Innova). `title`, `detail` y `spoken` ya vienen redactados por el backend. */
+export interface ApiMatter {
+  id: string;
+  detector: string;
+  scope: string;
+  branchLabel: string | null;
+  title: string;
+  detail: string;
+  spoken: string;
+  periodDate: string;
+  severity: ApiMatterSeverity;
+  status: ApiMatterStatus;
+  expected: number | null;
+  actual: number | null;
+  evidence: Record<string, string | number | null>;
+  createdAt: string;
+  updatedAt: string;
+  seenAt: string | null;
+  resolvedAt: string | null;
+}
+
 export class ApiError extends Error {
   status: number;
   constructor(message: string, status: number) {
@@ -192,4 +215,14 @@ export const api = {
     request<void>(token, `/assistant/conversations/${encodeURIComponent(conversationId)}`, { method: "PUT", body: JSON.stringify(body), signal }),
   deleteConversation: (token: string, conversationId: string, signal?: AbortSignal) =>
     request<void>(token, `/assistant/conversations/${encodeURIComponent(conversationId)}`, { method: "DELETE", signal }),
+  /** Avisos del asesor, del día más reciente al más viejo. `newCount` cuenta los que la persona todavía no vio, sea cual sea el filtro. */
+  advisorMatters: (token: string, opts: { status?: ApiMatterStatus[]; days?: number } = {}, signal?: AbortSignal) => {
+    const query = new URLSearchParams();
+    if (opts.status?.length) query.set("status", opts.status.join(","));
+    if (opts.days) query.set("days", String(opts.days));
+    return request<{ matters: ApiMatter[]; newCount: number }>(token, `/advisor/matters${query.size ? `?${query}` : ""}`, { signal });
+  },
+  /** Marcar un aviso como visto o descartarlo (409 si ya se resolvió solo). */
+  markAdvisorMatter: (token: string, id: string, status: "seen" | "dismissed", signal?: AbortSignal) =>
+    request<{ matter: ApiMatter }>(token, `/advisor/matters/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify({ status }), signal }),
 };

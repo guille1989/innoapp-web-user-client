@@ -310,3 +310,25 @@ button { border: 0; background: none; cursor: pointer; }
 .msg-table td { font-variant-numeric: tabular-nums; }
 .msg-table tbody tr:last-child td { border-bottom: 0; }
 .msg-table tbody tr:hover td { background: rgba(var(--ink-rgb),.035); }
+/* Avisos del asesor del negocio (Innova): portada de la vista IA y contador de la pestaña. */
+.nav-badge { display: inline-grid; place-items: center; margin-left: 6px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; background: var(--red); color: var(--on-accent); font-size: 9px; font-weight: 700; line-height: 1; vertical-align: middle; }
+.attention { width: min(760px, calc(100% - 40px)); margin: 0 auto 22px; display: grid; gap: 10px; }
+.attention-head { margin: 0; display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: calc(11px * var(--afs, 1)); font-weight: 600; letter-spacing: .12em; text-transform: uppercase; }
+.attention-card { --sev: var(--teal-rgb); display: grid; gap: 3px; padding: 12px 14px 12px 16px; border: 1px solid var(--border); border-left: 3px solid rgb(var(--sev)); border-radius: 12px; background: rgba(var(--ink-rgb), .035); }
+.attention-card[data-severity="critical"] { --sev: var(--red-rgb); }
+.attention-card[data-severity="warn"] { --sev: var(--amber-rgb); }
+.attention-card.seen { opacity: .62; }
+.attention-tag { color: rgb(var(--sev)); font-size: calc(10px * var(--afs, 1)); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.attention-title { margin: 0; font-size: calc(14px * var(--afs, 1)); font-weight: 600; line-height: 1.35; }
+.attention-detail { margin: 0; color: var(--muted); font-size: calc(12.5px * var(--afs, 1)); line-height: 1.5; }
+.attention-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.attention-actions button { padding: 5px 12px; border: 1px solid var(--border); border-radius: 999px; color: var(--text); font-size: calc(12px * var(--afs, 1)); transition: .15s; }
+.attention-actions button:hover:not(:disabled) { border-color: rgba(var(--teal-rgb), .6); }
+.attention-actions button.primary { border-color: rgba(var(--teal-rgb), .45); background: var(--teal-dim); color: var(--teal); }
+.attention-actions button:disabled { opacity: .45; cursor: default; }
+.attention-more { margin: 0; color: var(--muted); font-size: calc(12px * var(--afs, 1)); text-align: center; }
+/* Con avisos la portada es más alta: arranca arriba y se desplaza, en vez de centrarse y cortarse. */
+.ai-chat.empty.with-attention .ai-chat-main { justify-content: flex-start; overflow-y: auto; padding-bottom: 0; }
+.ai-chat.with-attention .ai-chat-logo { width: min(240px, 60vw); margin-bottom: 14px; }
+.ai-chat.with-attention .ai-chat-hero { margin-bottom: 20px; }
+.ai-chat.with-attention .ai-chat-composer { padding-bottom: calc(24px + env(safe-area-inset-bottom)); }

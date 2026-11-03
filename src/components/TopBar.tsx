@@ -10,6 +10,8 @@ interface TopBarProps {
   active: AppView;
   onChange: (view: AppView) => void;
   onOpenGuide: () => void;
+  /** Avisos que la persona todavía no vio: se muestran como contador en la pestaña IA. */
+  attentionCount?: number;
 }
 
 function IconSun() {
@@ -29,7 +31,7 @@ function IconMoon() {
   );
 }
 
-export function TopBar({ active, onChange, onOpenGuide }: TopBarProps) {
+export function TopBar({ active, onChange, onOpenGuide, attentionCount = 0 }: TopBarProps) {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -53,7 +55,14 @@ export function TopBar({ active, onChange, onOpenGuide }: TopBarProps) {
         <img src="/brand/innoapp-mark.png" alt="InnoApp" />
       </div>
       <nav className="view-switcher glass" aria-label="Secciones principales">
-        <button data-tour="view-ai" className={active === "ai" ? "active" : ""} onClick={() => onChange("ai")}>IA</button>
+        <button
+          data-tour="view-ai"
+          className={active === "ai" ? "active" : ""}
+          aria-label={attentionCount > 0 ? `IA, ${attentionCount} ${attentionCount === 1 ? "aviso nuevo" : "avisos nuevos"}` : undefined}
+          onClick={() => onChange("ai")}
+        >
+          IA{attentionCount > 0 && <span className="nav-badge" aria-hidden="true">{attentionCount > 9 ? "9+" : attentionCount}</span>}
+        </button>
         <button data-tour="view-data"className={active === "dashboard" ? "active" : ""} onClick={() => onChange("dashboard")}>Datos</button>
         <button data-tour="view-agents" className={active === "robots" ? "active" : ""} onClick={() => onChange("robots")}>Agentes</button>
       </nav>

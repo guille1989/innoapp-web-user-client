@@ -3,8 +3,10 @@ import { IconPlus, IconSend } from "../icons";
 import { useFontLevel } from "../dashboard/fontScale";
 import { useConversationList } from "../../hooks/useConversationList";
 import { ChatMessageContent } from "./ChatMessageContent";
+import { AttentionPanel } from "./AttentionPanel";
 import { ConversationSidebar, IconSidebar } from "./ConversationSidebar";
 import { SUGGESTED, useAssistantChat } from "./useAssistantChat";
+import type { ApiMatter } from "../../api/client";
 import type { Widget } from "../../types";
 
 interface AiChatViewProps {
@@ -13,13 +15,15 @@ interface AiChatViewProps {
   idToken: string;
   businessName: string;
   onReportSaved: () => void;
+  /** Avisos del asesor del negocio; se muestran en la portada, antes de empezar a conversar. */
+  attention?: { matters: ApiMatter[]; onMark: (id: string, status: "seen" | "dismissed") => void };
 }
 
 // En pantallas angostas el historial es un panel que se superpone al chat (y se cierra al elegir algo).
 const isNarrow = () => typeof window !== "undefined" && window.matchMedia("(max-width: 760px)").matches;
 
 /** Vista IA: conversación a pantalla completa con el asistente de datos, con el historial de conversaciones al lado. */
-export function AiChatView({ active, onCreateWidget, idToken, businessName, onReportSaved }: AiChatViewProps) {
+export function AiChatView({ active, onCreateWidget, idToken, businessName, onReportSaved, attention }: AiChatViewProps) {
   const list = useConversationList(idToken);
   const { messages, typing, ready, blocked, usageNotice, activeId, send, startNewConversation, openConversation } = useAssistantChat({
     idToken, onCreateWidget, onReportSaved, persist: true, onConversationSaved: list.upsert,
@@ -76,7 +80,7 @@ export function AiChatView({ active, onCreateWidget, idToken, businessName, onRe
   }
 
   return (
-    <section className={`ai-chat view${active ? " active" : ""}${started ? "" : " empty"}${ready ? "" : " loading"}`} aria-label="Conversación con la IA">
+    <section className={`ai-chat view${active ? " active" : ""}${started ? "" : " empty"}${ready ? "" : " loading"}${!started && attention?.matters.length ? " with-attention" : ""}`} aria-label="Conversación con la IA">
       <div className="canvas-grid" />
       <div className="canvas-vignette" />
       <ConversationSidebar
@@ -112,6 +116,7 @@ export function AiChatView({ active, onCreateWidget, idToken, businessName, onRe
             <>
               <img className="ai-chat-logo" src="/brand/innoapp-logo-wordmark.png" alt="InnoApp" />
               <h1 className="ai-chat-hero">El poder de <span>tus datos</span> al alcance de tus manos</h1>
+              {attention && <AttentionPanel matters={attention.matters} onAsk={ask} onMark={attention.onMark} disabled={typing || !ready || blocked} />}
             </>
           )}
         <div className="ai-chat-composer">
