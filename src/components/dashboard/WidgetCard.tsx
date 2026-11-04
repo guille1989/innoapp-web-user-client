@@ -1,5 +1,5 @@
 import { formatWidgetValue } from "../../lib/aggregate";
-import { AGG_LABELS } from "../../data/widgetLabels";
+import { AGG_LABELS, FIELD_LABELS } from "../../data/widgetLabels";
 import { usePeriod } from "../../lib/periodFilter";
 import { IconTrash } from "../icons";
 import { BarChart } from "./charts/BarChart";
@@ -53,5 +53,6 @@ function KpiBody({ widget: w }: { widget: Widget }) {
   const [period] = usePeriod();
   const value = w.data?.[0]?.value;
   if (value === undefined) return <span className="widget-empty">{period.preset === "all" ? "Sin datos para esta métrica" : "Sin datos en este período"}</span>;
-  return <div className="kpi-body"><div className="kpi-value mono">{formatWidgetValue(w.field, value)}</div><div className="kpi-sub"><span className="trend-dot" />{w.field === "event_count" ? "conteo" : AGG_LABELS[w.agg].toLowerCase()} · {w.dataStatus === "stale" ? "último resultado válido" : w.dataLabel ?? "datos confirmados"}</div></div>;
+  const secondary = w.secondaryField ? w.secondaryData?.[0]?.value : undefined;
+  return <div className="kpi-body"><div className="kpi-value mono">{formatWidgetValue(w.field, value)}{secondary !== undefined && w.secondaryField && <span className="kpi-secondary"> / {formatWidgetValue(w.secondaryField, secondary)} {w.secondaryField === "quantity" ? "unidades" : FIELD_LABELS[w.secondaryField].toLowerCase()}</span>}</div><div className="kpi-sub"><span className="trend-dot" />{w.field === "event_count" ? "conteo" : AGG_LABELS[w.agg].toLowerCase()} · {w.dataStatus === "stale" ? "último resultado válido" : w.dataLabel ?? "datos confirmados"}</div></div>;
 }

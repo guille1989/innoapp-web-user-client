@@ -41,6 +41,8 @@ export interface ApiWidget {
   name: string;
   visualization: "kpi" | "bar" | "line" | "donut";
   metric: { field: string; aggregation: "sum" | "avg" | "max" | "min" | "count" };
+  /** Solo KPI: segunda cifra que se muestra junto a la principal. */
+  secondaryMetric?: { field: string; aggregation: "sum" | "avg" | "max" | "min" | "count" };
   groupBy?: string;
   filters?: { dateFrom?: string; dateTo?: string; port?: string; agentId?: string; status?: ApiTicket["status"]; descriptionContains?: string };
   createdAt: string;
@@ -196,7 +198,7 @@ export const api = {
   widgets: (token: string, signal?: AbortSignal) => request<{ widgets: ApiWidget[] }>(token, "/widgets", { signal }),
   /** `range` filtra por fechas inclusivas; sin él se aplica la ventana predeterminada del servidor. */
   widgetData: (token: string, id: string, range?: { dateFrom: string; dateTo: string }, signal?: AbortSignal) =>
-    request<{ data: ApiWidgetData }>(
+    request<{ data: ApiWidgetData; secondaryData?: ApiWidgetData }>(
       token,
       `/widgets/${encodeURIComponent(id)}/data?${range ? `dateFrom=${range.dateFrom}&dateTo=${range.dateTo}&` : ""}tz=${encodeURIComponent(browserTimeZone())}`,
       { signal },

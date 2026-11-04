@@ -112,9 +112,9 @@ export function useCloudData(idToken: string) {
         ])));
         return Promise.all(list.map(async (w) => {
           try {
-            const { data } = await api.widgetData(idToken, w.widgetId, w.groupBy === "hour" ? HOURLY_RANGE() : periodDates, task.signal);
+            const { data, secondaryData } = await api.widgetData(idToken, w.widgetId, w.groupBy === "hour" ? HOURLY_RANGE() : periodDates, task.signal);
             if (!task.isCurrent()) return true;
-            const state = widgetDataSuccess(data);
+            const state = widgetDataSuccess(data, undefined, secondaryData);
             dataCache.current.set(cacheKey(w), state);
             setWidgetStates((previous) => ({ ...previous, [w.widgetId]: state }));
             return true;

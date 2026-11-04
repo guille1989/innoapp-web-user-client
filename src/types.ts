@@ -50,6 +50,10 @@ export interface Widget {
   field: AggregatableField;
   agg: Aggregation;
   group: GroupField | null;
+  /** Solo KPI: segunda cifra (p. ej. unidades) que se muestra junto a la principal. */
+  secondaryField?: AggregatableField;
+  secondaryAgg?: Aggregation;
+  secondaryData?: AggregateRow[];
   /** Limita el widget a una sucursal (agente). Sin valor, incluye todas. */
   agentId?: string;
   /** Limita el widget a los productos cuyo nombre contiene este texto. */

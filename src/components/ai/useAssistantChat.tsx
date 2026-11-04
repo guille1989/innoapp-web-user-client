@@ -33,6 +33,7 @@ function draftToWidget(draft: ApiWidgetDraft): Omit<Widget, "id"> {
     field: draft.metric.field as Widget["field"],
     agg: draft.metric.aggregation,
     group: (draft.groupBy ?? null) as Widget["group"],
+    ...(draft.secondaryMetric ? { secondaryField: draft.secondaryMetric.field as Widget["field"], secondaryAgg: draft.secondaryMetric.aggregation } : {}),
     ...(draft.filters?.agentId ? { agentId: draft.filters.agentId } : {}),
     ...(draft.filters?.descriptionContains ? { descriptionContains: draft.filters.descriptionContains } : {}),
   };

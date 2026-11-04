@@ -81,6 +81,13 @@ export function AuthenticatedApp() {
         field: VALID_FIELDS.has(w.metric.field as Widget["field"]) ? w.metric.field as Widget["field"] : "event_count",
         agg: w.metric.aggregation,
         group,
+        ...(w.secondaryMetric && VALID_FIELDS.has(w.secondaryMetric.field as Widget["field"])
+          ? {
+              secondaryField: w.secondaryMetric.field as Widget["field"],
+              secondaryAgg: w.secondaryMetric.aggregation,
+              secondaryData: cloud.widgetStates[w.widgetId]?.secondaryData?.flatMap((row) => row.value === null ? [] : [{ key: row.label ?? "total", value: row.value }]),
+            }
+          : {}),
         agentId: w.filters?.agentId,
         descriptionContains: w.filters?.descriptionContains,
         keyLabels: group === "agent" ? agentLabels : undefined,
@@ -120,6 +127,7 @@ export function AuthenticatedApp() {
       name: cfg.title,
       visualization: cfg.type,
       metric: { field: cfg.field, aggregation: cfg.field === "event_count" ? "count" : cfg.agg },
+      ...(cfg.secondaryField ? { secondaryMetric: { field: cfg.secondaryField, aggregation: cfg.secondaryField === "event_count" ? "count" : cfg.secondaryAgg ?? "sum" } } : {}),
       ...(cfg.group ? { groupBy: cfg.group } : {}),
       ...(cfg.agentId || cfg.descriptionContains
         ? { filters: { ...(cfg.agentId ? { agentId: cfg.agentId } : {}), ...(cfg.descriptionContains ? { descriptionContains: cfg.descriptionContains } : {}) } }
