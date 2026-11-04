@@ -98,10 +98,13 @@ export function AiChatView({ active, onCreateWidget, idToken, businessName, onRe
         onLoadMore={() => void list.loadMore()}
       />
       <div className="ai-chat-main">
-        <div className="ai-chat-bar glass">
-          <button type="button" onClick={() => setSideOpen((v) => !v)} aria-label={sideOpen ? "Ocultar el historial" : "Mostrar el historial"} aria-expanded={sideOpen} title={sideOpen ? "Ocultar el historial" : "Mostrar el historial"}><IconSidebar /></button>
-          <button type="button" onClick={newConversation} aria-label="Nueva conversación" title="Nueva conversación"><IconPlus /></button>
-        </div>
+        {/* Con el historial abierto, ocultar y "Nueva conversación" viven en el propio panel: la barra solo aparece cuando está cerrado. */}
+        {!sideOpen && (
+          <div className="ai-chat-bar glass">
+            <button type="button" onClick={() => setSideOpen(true)} aria-label="Mostrar el historial" aria-expanded={false} title="Mostrar el historial"><IconSidebar /></button>
+            <button type="button" className="ai-bar-new" onClick={newConversation} aria-label="Nueva conversación" title="Nueva conversación"><IconPlus /></button>
+          </div>
+        )}
         {started
           ? (
             <div className="ai-chat-body" ref={bodyRef}>
