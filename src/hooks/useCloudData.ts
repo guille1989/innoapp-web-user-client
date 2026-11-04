@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { localDateKey } from "../lib/chartScale";
 import { periodRange, usePeriod, type PeriodFilter } from "../lib/periodFilter";
 import { api, type AgentLocation, type ApiActivationCode, type ApiAgent, type ApiTicket, type ApiWidget } from "../api/client";
+import { collectFailures, summarizeFailures } from "../lib/refreshFailures";
 import { widgetDataFailure, widgetDataSuccess, type WidgetDataState } from "../lib/widgetDataState";
 import { useRequestScope } from "./useRequestScope";
 
@@ -104,13 +105,13 @@ export function useCloudData(idToken: string) {
       // Los datos de cada widget se piden apenas se conoce la lista (no esperan al resto del
       // refresco) y cada uno se publica al llegar: un widget lento no retiene a los rápidos.
       const dataPromise = api.widgets(idToken, task.signal).then(async ({ widgets: list }) => {
-        if (!task.isCurrent()) return [];
+        if (!task.isCurrent()) return true;
         widgetsRef.current = list;
         setWidgets(list);
         setWidgetStates((previous) => Object.fromEntries(list.map((w) => [
           w.widgetId, previous[w.widgetId] ?? dataCache.current.get(cacheKey(w)) ?? loadingState,
         ])));
-        return Promise.all(list.map(async (w) => {
+        const results = await Promise.all(list.map(async (w) => {
           try {
             const { data, secondaryData } = await api.widgetData(idToken, w.widgetId, w.groupBy === "hour" ? HOURLY_RANGE() : periodDates, task.signal);
             if (!task.isCurrent()) return true;
@@ -125,33 +126,52 @@ export function useCloudData(idToken: string) {
             return false;
           }
         }));
+        // Los widgets que sí respondieron ya se publicaron arriba; esto solo avisa de los que no.
+        if (results.includes(false)) throw new Error("falló la consulta de uno o más widgets");
+        return true;
+      }, (err: unknown) => {
+        // No se pudo ni traer la lista: lo que hay en pantalla no se pudo revalidar.
+        if (task.isCurrent()) {
+          const message = err instanceof Error ? err.message : String(err);
+          setWidgetStates((previous) => Object.fromEntries(Object.entries(previous).map(([id, state]) => [id, widgetDataFailure(state, message)])));
+        }
+        throw err;
       });
-      dataPromise.catch(() => {}); // si falla antes de que se espere abajo, el error se maneja allí
 
-      const [ticketResult, reviewResult, agentResult, codeResult] = await Promise.all([
-        api.tickets(idToken, {}, task.signal),
-        fetchAllNeedsReview(idToken, task.signal),
-        api.agents(idToken, AbortSignal.any([task.signal, agentTask.signal])).catch((err) => {
-          if (!agentTask.isCurrent()) return null;
-          throw err;
+      dataPromise.catch(() => {}); // lo recoge `collectFailures` abajo; esto evita un rechazo sin manejar si algo falla antes
+
+      // Cada recurso se publica apenas llega y falla por su cuenta: con un `Promise.all` único,
+      // que fallara uno (p. ej. los códigos) descartaba las respuestas correctas de los demás,
+      // marcaba como fallidos todos los widgets y, al terminar la tarea, invalidaba las respuestas
+      // de widgets que todavía estaban en camino. Lo que no se pudo actualizar conserva su último
+      // valor bueno. `collectFailures` espera a todos antes de cerrar la tarea.
+      const failures = await collectFailures({
+        tickets: api.tickets(idToken, {}, task.signal).then((result) => {
+          if (task.isCurrent()) setTickets(result.tickets);
         }),
-        api.activationCodes(idToken, task.signal),
-      ]);
-      if (!task.isCurrent()) return;
-      setTickets(ticketResult.tickets);
-      setReviewTickets(reviewResult);
-      if (agentTask.isCurrent() && agentResult) setAgents((current) => mergeAgentsKeepingNewest(current, agentResult.agents));
+        review: fetchAllNeedsReview(idToken, task.signal).then((result) => {
+          if (task.isCurrent()) setReviewTickets(result);
+        }),
+        agents: api.agents(idToken, AbortSignal.any([task.signal, agentTask.signal])).then(
+          (result) => {
+            if (agentTask.isCurrent()) setAgents((current) => mergeAgentsKeepingNewest(current, result.agents));
+          },
+          (err: unknown) => {
+            // Reemplazada por un `refreshAgents` más nuevo: no es un fallo.
+            if (agentTask.isCurrent()) throw err;
+          },
+        ),
+        codes: api.activationCodes(idToken, task.signal).then((result) => {
+          if (task.isCurrent()) setCodes(result.codes);
+        }),
+        widgets: dataPromise,
+      });
       agentTask.finish();
-      setCodes(codeResult.codes);
-      const dataOk = await dataPromise;
       if (!task.isCurrent()) return;
-      setError(dataOk.includes(false) ? "No se pudieron actualizar los datos de uno o más widgets" : null);
+      setError(summarizeFailures(failures));
     } catch (err) {
-      if (task.isCurrent()) {
-        const message = err instanceof Error ? err.message : String(err);
-        setError(message);
-        setWidgetStates((previous) => Object.fromEntries(Object.entries(previous).map(([id, state]) => [id, widgetDataFailure(state, message)])));
-      }
+      // Solo un error inesperado antes de lanzar las peticiones (cada petición maneja el suyo).
+      if (task.isCurrent()) setError(err instanceof Error ? err.message : String(err));
     } finally {
       if (task.isCurrent()) setLoading(false);
       agentTask.finish();
