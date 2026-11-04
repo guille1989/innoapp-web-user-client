@@ -4,6 +4,8 @@ import {
   conversationCreatedAt,
   conversationSignature,
   deriveTitle,
+  filterConversations,
+  formatConversationTime,
   groupConversations,
   MAX_STORED_MESSAGES,
   MAX_STORED_TEXT,
@@ -103,6 +105,29 @@ test("una fecha inválida no rompe el agrupado", () => {
   const groups = groupConversations([{ conversationId: "x", title: "t", createdAt: "no-es-fecha", updatedAt: "", expiresAt: "" }]);
 
   assert.deepEqual(groups.map((g) => g.label), ["Más antiguas"]);
+});
+
+test("la búsqueda del historial ignora mayúsculas y tildes", () => {
+  const items = [
+    { conversationId: "a", title: "Gráfica de ingresos", createdAt: "", updatedAt: "", expiresAt: "" },
+    { conversationId: "b", title: "Clientes con más compras", createdAt: "", updatedAt: "", expiresAt: "" },
+  ];
+
+  assert.deepEqual(filterConversations(items, "grafica").map((i) => i.conversationId), ["a"]);
+  assert.deepEqual(filterConversations(items, " MAS ").map((i) => i.conversationId), ["b"]);
+  assert.equal(filterConversations(items, "").length, 2);
+  assert.equal(filterConversations(items, "zzz").length, 0);
+});
+
+test("la hora de la fila: hora de hoy, Ayer, día de la semana o fecha corta", () => {
+  const now = new Date(2026, 9, 21, 15, 0);
+  const at = (daysAgo, hour = 9, minute = 5) => new Date(2026, 9, 21 - daysAgo, hour, minute).toISOString();
+
+  assert.equal(formatConversationTime(at(0), now), "09:05");
+  assert.equal(formatConversationTime(at(1), now), "Ayer");
+  assert.match(formatConversationTime(at(3), now), /^[a-záéíóú]{2,4}$/);
+  assert.match(formatConversationTime(at(20), now), /^\d{1,2} [a-z]{3,4}$/);
+  assert.equal(formatConversationTime("no-es-fecha", now), "");
 });
 
 test("la conversación activa se guarda y se borra en el storage de la pestaña", () => {

@@ -53,6 +53,26 @@ export function groupConversations(items: ApiConversationSummary[], now: Date = 
   return groups;
 }
 
+const normalize = (text: string) => text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+/** Filtra el historial cargado por título, sin distinguir mayúsculas ni tildes. */
+export function filterConversations(items: ApiConversationSummary[], query: string): ApiConversationSummary[] {
+  const needle = normalize(query.trim());
+  return needle ? items.filter((item) => normalize(item.title).includes(needle)) : items;
+}
+
+/** Hora corta para la fila del historial: hora si es de hoy, "Ayer", día de la semana (últimos 7 días) o "12 jun". */
+export function formatConversationTime(iso: string, now: Date = new Date()): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const days = Math.round((startOfDay(now) - startOfDay(date)) / 86_400_000);
+  if (days <= 0) return date.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit", hour12: false });
+  if (days === 1) return "Ayer";
+  if (days < 7) return date.toLocaleDateString("es", { weekday: "short" }).replace(".", "");
+  return date.toLocaleDateString("es", { day: "numeric", month: "short" }).replace(".", "");
+}
+
 // La conversación abierta sobrevive a un refresh de la pestaña, pero una pestaña nueva arranca en blanco
 // (el resto se abre desde el historial). Solo se guarda el id: el contenido siempre sale del backend.
 const ACTIVE_KEY = "innoapp.ai.activeConversation";
