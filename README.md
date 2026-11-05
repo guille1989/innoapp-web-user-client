@@ -45,7 +45,7 @@ VITE_COGNITO_CLIENT_ID=...
 VITE_COGNITO_REGION=us-east-1
 VITE_API_BASE_URL=https://...execute-api.../prod
 VITE_AGENT_DOWNLOAD_URL=/downloads/InnoAppAgent-Setup.exe
-VITE_AGENT_VERSION=0.5.0
+VITE_AGENT_VERSION=0.6.0
 ```
 
 `VITE_AGENT_DOWNLOAD_URL` habilita el botón de descarga dentro de la pestaña

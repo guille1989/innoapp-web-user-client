@@ -6,4 +6,4 @@ export const AGENT_DOWNLOAD_URL = (import.meta.env.VITE_AGENT_DOWNLOAD_URL as st
  * (ver checklist del viewer). No confundir con `ApiAgent.version` (reportada
  * por heartbeat del agent ya instalado).
  */
-export const AGENT_VERSION = (import.meta.env.VITE_AGENT_VERSION as string | undefined)?.trim() || "0.5.0";
+export const AGENT_VERSION = (import.meta.env.VITE_AGENT_VERSION as string | undefined)?.trim() || "0.6.0";
