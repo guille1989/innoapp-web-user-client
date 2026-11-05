@@ -27,6 +27,8 @@ export const GROUP_LABELS: Record<GroupField, string> = {
   description: "Producto",
   customer: "Cliente",
   paymentMethod: "Medio de pago",
+  hourOfDay: "Hora del día",
+  weekday: "Día de la semana",
   day: "Día",
   hour: "Hora",
 };

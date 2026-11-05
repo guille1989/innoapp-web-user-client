@@ -21,7 +21,11 @@ import type { BusinessEvent, Robot, Widget } from "./types";
 
 type ActiveSheet = "ai" | "builder" | null;
 const VALID_FIELDS = new Set<Widget["field"]>(["event_count", "quantity", "unitPrice", "subtotal", "discount", "tip", "tax", "total"]);
-const VALID_GROUPS = new Set<NonNullable<Widget["group"]>>(["port", "agent", "status", "parsedBy", "description", "paymentMethod", "day", "hour"]);
+const VALID_GROUPS = new Set<NonNullable<Widget["group"]>>(["port", "agent", "status", "parsedBy", "description", "paymentMethod", "hourOfDay", "weekday", "day", "hour"]);
+
+/** El backend devuelve la hora del día como "00"–"23" y el día de la semana como "1" (lunes)–"7": se muestran legibles. */
+const HOUR_OF_DAY_LABELS: Record<string, string> = Object.fromEntries(Array.from({ length: 24 }, (_, h) => [String(h).padStart(2, "0"), `${String(h).padStart(2, "0")}:00`]));
+const WEEKDAY_LABELS: Record<string, string> = { "1": "Lunes", "2": "Martes", "3": "Miércoles", "4": "Jueves", "5": "Viernes", "6": "Sábado", "7": "Domingo" };
 
 function toEvent(ticket: ApiTicket): BusinessEvent {
   const date = new Date(ticket.capturedAt);
@@ -91,7 +95,7 @@ export function AuthenticatedApp() {
           : {}),
         agentId: w.filters?.agentId,
         descriptionContains: w.filters?.descriptionContains,
-        keyLabels: group === "agent" ? agentLabels : undefined,
+        keyLabels: group === "agent" ? agentLabels : group === "hourOfDay" ? HOUR_OF_DAY_LABELS : group === "weekday" ? WEEKDAY_LABELS : undefined,
         data: cloud.widgetData[w.widgetId]?.flatMap((row) => row.value === null ? [] : [{ key: row.label ?? "total", value: row.value, sampleCount: row.sampleCount }]) ?? [],
         dataStatus: cloud.widgetStates[w.widgetId]?.status ?? "loading",
         dataError: cloud.widgetStates[w.widgetId]?.error,
