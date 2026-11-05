@@ -11,6 +11,7 @@ export interface ApiTicket {
   discount?: number;
   tip?: number;
   paymentDueDate?: string;
+  paymentMethod?: string;
   failReason?: string;
   parsedBy?: string;
   reviewedBy?: string;

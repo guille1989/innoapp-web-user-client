@@ -21,7 +21,7 @@ import type { BusinessEvent, Robot, Widget } from "./types";
 
 type ActiveSheet = "ai" | "builder" | null;
 const VALID_FIELDS = new Set<Widget["field"]>(["event_count", "quantity", "unitPrice", "subtotal", "discount", "tip", "tax", "total"]);
-const VALID_GROUPS = new Set<NonNullable<Widget["group"]>>(["port", "agent", "status", "parsedBy", "description", "day", "hour"]);
+const VALID_GROUPS = new Set<NonNullable<Widget["group"]>>(["port", "agent", "status", "parsedBy", "description", "paymentMethod", "day", "hour"]);
 
 function toEvent(ticket: ApiTicket): BusinessEvent {
   const date = new Date(ticket.capturedAt);
@@ -36,6 +36,7 @@ function toEvent(ticket: ApiTicket): BusinessEvent {
     monto: ticket.total ?? 0,
     items: ticket.items?.filter((item) => !item.voided).reduce((sum, item) => sum + (item.quantity ?? 0), 0) ?? 0,
     vence: ticket.paymentDueDate,
+    medioPago: ticket.paymentMethod,
   };
 }
 

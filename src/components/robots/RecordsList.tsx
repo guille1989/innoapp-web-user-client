@@ -30,6 +30,11 @@ function fieldChips(ev: BusinessEvent) {
         <span className="record-chip">
           items: <b>{ev.items}</b>
         </span>
+        {ev.medioPago && (
+          <span className="record-chip">
+            pago: <b>{ev.medioPago}</b>
+          </span>
+        )}
         {ev.vence && (
           <span className="record-chip">
             vence: <b>{fmtDueDate(ev.vence)}</b>

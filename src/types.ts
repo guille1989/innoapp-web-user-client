@@ -22,6 +22,8 @@ export interface VentaEvent extends BusinessEventBase {
   items: number;
   /** Fecha límite de pago (YYYY-MM-DD); solo las facturas electrónicas la traen. */
   vence?: string;
+  /** Medio de pago normalizado (Efectivo, QR…); solo los tickets que lo traen. */
+  medioPago?: string;
 }
 
 export interface DevolucionEvent extends BusinessEventBase {
@@ -39,7 +41,7 @@ export type BusinessEvent = VentaEvent | DevolucionEvent | AperturaCajaEvent;
 
 export type AggregatableField = "event_count" | "quantity" | "unitPrice" | "subtotal" | "discount" | "tip" | "tax" | "total";
 export type Aggregation = "sum" | "avg" | "max" | "min" | "count";
-export type GroupField = "port" | "agent" | "status" | "parsedBy" | "description" | "customer" | "day" | "hour";
+export type GroupField = "port" | "agent" | "status" | "parsedBy" | "description" | "customer" | "paymentMethod" | "day" | "hour";
 
 export type WidgetType = "kpi" | "bar" | "line" | "donut";
 
