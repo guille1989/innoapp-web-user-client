@@ -55,6 +55,7 @@ function toRobot(agent: ApiAgent): Robot {
     lat: agent.location?.lat,
     lng: agent.location?.lng,
     status,
+    version: agent.version,
     meta: agent.lastSeenAt ? `visto ${new Date(agent.lastSeenAt).toLocaleString("es-ES")}` : "sin heartbeat",
   };
 }

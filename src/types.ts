@@ -87,4 +87,6 @@ export interface Robot {
   lng?: number;
   status: RobotStatus;
   meta: string;
+  /** Versión reportada por el agent en el último heartbeat (observacional). */
+  version?: string;
 }
