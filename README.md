@@ -45,13 +45,16 @@ VITE_COGNITO_CLIENT_ID=...
 VITE_COGNITO_REGION=us-east-1
 VITE_API_BASE_URL=https://...execute-api.../prod
 VITE_AGENT_DOWNLOAD_URL=/downloads/InnoAppAgent-Setup.exe
-VITE_AGENT_VERSION=0.1.0-pilot
+VITE_AGENT_VERSION=0.5.0
 ```
 
-`VITE_AGENT_DOWNLOAD_URL` habilita el botÃ³n de descarga dentro de la pestaÃ±a
-Agentes. El instalador es universal; cada instalaciÃ³n queda vinculada al
-tenant mediante uno de los cÃ³digos de activaciÃ³n de un solo uso mostrados en
-la misma pantalla.
+`VITE_AGENT_DOWNLOAD_URL` habilita el botón de descarga dentro de la pestaña
+Agentes. `VITE_AGENT_VERSION` es la versión de marketing del **setup** (debe
+coincidir con el release de `agent-status-viewer` / `print-capture-agent`).
+La versión que cada robot ya tiene instalada llega por API (`GET /agents` →
+`version` del heartbeat) y se muestra en la lista de agentes. El instalador
+es universal; cada instalación queda vinculada al tenant mediante uno de los
+códigos de activación de un solo uso mostrados en la misma pantalla.
 
 `npm run dev` arranca el entorno local; `npm run build` valida TypeScript y
 genera el bundle de producción.
