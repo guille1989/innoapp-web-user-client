@@ -1,5 +1,6 @@
 import { fmtAmount } from "../data/format";
 import { AGG_LABELS, FIELD_LABELS } from "../data/widgetLabels";
+import { isHoliday } from "./holidays";
 import type { AggregateRow, Aggregation, Widget } from "../types";
 
 /**
@@ -10,7 +11,7 @@ import type { AggregateRow, Aggregation, Widget } from "../types";
  */
 
 export type TimeGranularity = "day" | "week" | "month";
-export type RangePreset = "today" | "7d" | "30d" | "90d" | "all" | "custom";
+export type RangePreset = "today" | "7d" | "30d" | "90d" | "week" | "month" | "quarter" | "semester" | "all" | "custom";
 
 export const DAY_KEY = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -69,13 +70,62 @@ export function periodEndKey(key: string, granularity: TimeGranularity): string 
   return addDays(nextPeriodKey(key, granularity), -1);
 }
 
-export const RANGE_LABELS: Record<RangePreset, string> = { today: "Hoy", "7d": "7 días", "30d": "30 días", "90d": "90 días", all: "Todo", custom: "Personalizado" };
+export const RANGE_LABELS: Record<RangePreset, string> = {
+  today: "Hoy", "7d": "7 días", "30d": "30 días", "90d": "90 días",
+  week: "Esta semana", month: "Este mes", quarter: "Este trimestre", semester: "Este semestre",
+  all: "Todo", custom: "Personalizado",
+};
 
-const PRESET_DAYS:Record<Exclude<RangePreset, "all" | "custom">, number> = { today: 1, "7d": 7, "30d": 30, "90d": 90 };
+const PRESET_DAYS: Record<"today" | "7d" | "30d" | "90d", number> = { today: 1, "7d": 7, "30d": 30, "90d": 90 };
+
+/**
+ * Inicio del periodo de calendario en curso. Semana: el lunes, o el martes si el
+ * lunes fue festivo (el festivo no cuenta como día de la semana). Mes, trimestre
+ * y semestre arrancan el día 1 del mes que corresponde.
+ */
+/** Periodos de calendario que se pueden elegir: cuántos meses abarcan. */
+export const UNIT_MONTHS = { month: 1, quarter: 3, semester: 6 } as const;
+export type CalendarUnit = keyof typeof UNIT_MONTHS;
+
+export function isCalendarUnit(preset: RangePreset): preset is CalendarUnit {
+  return preset === "month" || preset === "quarter" || preset === "semester";
+}
+
+/** `YYYY-MM` desplazado `delta` meses. */
+export function shiftMonths(monthKey: string, delta: number): string {
+  const date = new Date(Date.UTC(Number(monthKey.slice(0, 4)), Number(monthKey.slice(5, 7)) - 1 + delta, 1));
+  return date.toISOString().slice(0, 7);
+}
+
+/** Primer mes (`YYYY-MM`) del mes/trimestre/semestre que contiene a `monthKey`. */
+export function unitStartMonth(unit: CalendarUnit, monthKey: string): string {
+  const size = UNIT_MONTHS[unit];
+  const first = Math.floor((Number(monthKey.slice(5, 7)) - 1) / size) * size + 1;
+  return `${monthKey.slice(0, 4)}-${String(first).padStart(2, "0")}`;
+}
+
+/** Último día del mes/trimestre/semestre que arranca en `anchor` (`YYYY-MM`). */
+function unitEndKey(unit: CalendarUnit, anchor: string): string {
+  return addDays(`${shiftMonths(anchor, UNIT_MONTHS[unit])}-01`, -1);
+}
+
+/**
+ * Inicio del periodo de calendario en curso. Semana: el lunes, o el martes si el
+ * lunes fue festivo (el festivo no cuenta como día de la semana). Mes, trimestre
+ * y semestre arrancan el día 1 del mes que corresponde.
+ */
+function calendarStart(preset: "week" | CalendarUnit, today: string): string {
+  if (preset === "week") {
+    const monday = periodKey(today, "week");
+    const start = isHoliday(monday) ? addDays(monday, 1) : monday;
+    return start <= today ? start : today;
+  }
+  return `${unitStartMonth(preset, today.slice(0, 7))}-01`;
+}
 
 export function resolveRange(
   preset: RangePreset,
-  custom: { from?: string; to?: string },
+  custom: { from?: string; to?: string; anchor?: string },
   firstKey: string | undefined,
   lastKey: string | undefined,
 ): { from: string; to: string } {
@@ -86,6 +136,13 @@ export function resolveRange(
   if (preset === "all") {
     const to = lastKey && lastKey > today ? lastKey : today;
     return { from: firstKey ?? addDays(to, -29), to };
+  }
+  if (isCalendarUnit(preset) && custom.anchor && /^\d{4}-\d{2}$/.test(custom.anchor) && custom.anchor < calendarStart(preset, today).slice(0, 7)) {
+    // Periodo ya cerrado: completo, del día 1 al último día.
+    return { from: `${custom.anchor}-01`, to: unitEndKey(preset, custom.anchor) };
+  }
+  if (preset === "week" || preset === "month" || preset === "quarter" || preset === "semester") {
+    return { from: calendarStart(preset, today), to: today };
   }
   const days = preset === "custom" ? 30 : PRESET_DAYS[preset];
   return { from: addDays(today, -(days - 1)), to: today };
