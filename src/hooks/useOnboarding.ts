@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
-import { api, type ApiMe, type OnboardingAction } from "../api/client";
+import { api, type ApiBusinessProfile, type ApiBusinessProfilePatch, type ApiMe, type OnboardingAction } from "../api/client";
+import { configureAmountFormat } from "../data/format";
 import { useRequestScope } from "./useRequestScope";
+
+function applyAmountFormat(me: ApiMe | null) {
+  configureAmountFormat({
+    currency: me?.profile?.currency,
+    locale: me?.profile?.locale,
+  });
+}
 
 export function useOnboarding(idToken: string) {
   const scope = useRequestScope(idToken);
@@ -14,6 +22,7 @@ export function useOnboarding(idToken: string) {
       const result = await api.me(idToken, task.signal);
       if (!task.isCurrent()) return;
       setMe(result);
+      applyAmountFormat(result);
       setError(null);
     } catch (err) {
       if (task.isCurrent()) setError(err instanceof Error ? err.message : String(err));
@@ -39,5 +48,23 @@ export function useOnboarding(idToken: string) {
     }
   }, [idToken, scope]);
 
-  return { me, loading, error, refresh, act };
+  const updateProfile = useCallback(async (patch: ApiBusinessProfilePatch): Promise<ApiBusinessProfile | null> => {
+    scope.cancel("profile");
+    const task = scope.start("profile-update");
+    try {
+      const result = await api.updateProfile(idToken, patch, task.signal);
+      if (!task.isCurrent()) throw new DOMException("La sesión cambió", "AbortError");
+      setMe((current) => {
+        if (!current) return current;
+        const next = { ...current, profile: result.profile };
+        applyAmountFormat(next);
+        return next;
+      });
+      return result.profile;
+    } finally {
+      task.finish();
+    }
+  }, [idToken, scope]);
+
+  return { me, loading, error, refresh, act, updateProfile };
 }

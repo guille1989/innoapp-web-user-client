@@ -77,16 +77,35 @@ export interface ApiOnboardingState {
   productTourCompletedAt?: string;
   starterDashboardCreatedAt?: string;
 }
+/** Ficha liviana del negocio (P1): moneda, locale, rubro y horarios. */
+export type ApiOpeningHoursDay = { open: string; close: string } | "closed";
+export interface ApiBusinessProfile {
+  currency?: string;
+  locale?: string;
+  industry?: string;
+  openingHours?: {
+    default?: { open: string; close: string };
+    byWeekday?: Partial<Record<"1" | "2" | "3" | "4" | "5" | "6" | "7", ApiOpeningHoursDay>>;
+  };
+}
 export interface ApiMe {
   tenantId: string;
   businessName: string;
   createdAt: string;
   /** null identifica una cuenta anterior al onboarding. */
   onboarding: ApiOnboardingState | null;
+  /** Ficha de negocio; null si todavía no se cargó. Ausente en backends anteriores a P1. */
+  profile?: ApiBusinessProfile | null;
   /** Interruptores de funciones en beta de este negocio. Ausente (backend anterior) = todo apagado. */
   features?: { advisorView?: boolean };
 }
 export type OnboardingAction = "start" | "defer" | "complete" | "complete-product-tour" | "create-starter-dashboard";
+export type ApiBusinessProfilePatch = {
+  currency?: string | null;
+  locale?: string | null;
+  industry?: string | null;
+  openingHours?: ApiBusinessProfile["openingHours"] | null;
+};
 
 export type ApiMatterSeverity = "info" | "warn" | "critical";
 export type ApiMatterStatus = "new" | "seen" | "dismissed" | "resolved";
@@ -161,6 +180,9 @@ export const api = {
   me: (token: string, signal?: AbortSignal) => request<ApiMe>(token, "/me", { signal }),
   updateOnboarding: (token: string, action: OnboardingAction, signal?: AbortSignal) =>
     request<{ onboarding: ApiOnboardingState }>(token, "/me/onboarding", { method: "PATCH", body: JSON.stringify({ action }), signal }),
+  /** Actualiza la ficha del negocio (moneda, horarios, rubro). Campos en null se borran. */
+  updateProfile: (token: string, patch: ApiBusinessProfilePatch, signal?: AbortSignal) =>
+    request<{ profile: ApiBusinessProfile | null }>(token, "/me/profile", { method: "PATCH", body: JSON.stringify(patch), signal }),
   /** Una página de tickets; `nextCursor` viene solo si hay más. Con `status` consulta el índice por estado. */
   tickets: (token: string, opts: { status?: ApiTicket["status"]; cursor?: string } = {}, signal?: AbortSignal) => {
     const query = new URLSearchParams({ limit: "100" });

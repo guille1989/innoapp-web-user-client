@@ -16,10 +16,11 @@ import { useAuth } from "./auth/AuthContext";
 import { OnboardingFlow } from "./components/onboarding/OnboardingFlow";
 import { OnboardingReminder } from "./components/onboarding/OnboardingReminder";
 import { ProductTour } from "./components/onboarding/ProductTour";
+import { BusinessProfileSheet } from "./components/settings/BusinessProfileSheet";
 import type { ApiAgent, ApiTicket, ApiWidget } from "./api/client";
 import type { BusinessEvent, Robot, Widget } from "./types";
 
-type ActiveSheet = "ai" | "builder" | null;
+type ActiveSheet = "ai" | "builder" | "profile" | null;
 const VALID_FIELDS = new Set<Widget["field"]>(["event_count", "quantity", "unitPrice", "subtotal", "discount", "tip", "tax", "total"]);
 const VALID_GROUPS = new Set<NonNullable<Widget["group"]>>(["port", "agent", "status", "parsedBy", "description", "paymentMethod", "hourOfDay", "weekday", "day", "hour"]);
 
@@ -164,7 +165,7 @@ export function AuthenticatedApp() {
 
   return (
     <div className="app-root">
-      <TopBar active={view} onChange={setView} onOpenGuide={startTour} attentionCount={advisor.newCount} showAdvisorView={advisorView} />
+      <TopBar active={view} onChange={setView} onOpenGuide={startTour} onOpenBusinessProfile={() => setActiveSheet("profile")} attentionCount={advisor.newCount} showAdvisorView={advisorView} />
       <main className="app-stage">
         {(cloud.error || cloud.loading) && (
           <div className={`api-banner glass${cloud.error ? " error" : ""}`}>
@@ -173,7 +174,7 @@ export function AuthenticatedApp() {
             {cloud.error && <button onClick={() => void cloud.refresh()}>Reintentar</button>}
           </div>
         )}
-        <AiChatView active={view === "ai"} onCreateWidget={addWidget} idToken={idToken!} businessName={onboarding.me?.businessName ?? ""} onReportSaved={() => void reports.refresh()} attention={{ matters: advisor.matters, onMark: (id, status) => { void advisor.mark(id, status); } }} />
+        <AiChatView active={view === "ai"} onCreateWidget={addWidget} idToken={idToken!} businessName={onboarding.me?.businessName ?? ""} profile={onboarding.me?.profile} onReportSaved={() => void reports.refresh()} attention={{ matters: advisor.matters, onMark: (id, status) => { void advisor.mark(id, status); } }} />
         {advisorView && (
           <InnovaView
             active={view === "innova"}
@@ -182,6 +183,8 @@ export function AuthenticatedApp() {
             onReportSaved={() => void reports.refresh()}
             matters={advisor.matters}
             onOpenClassic={() => setView("ai")}
+            businessName={onboarding.me?.businessName}
+            profile={onboarding.me?.profile}
           />
         )}
         <DashboardView active={view === "dashboard"} widgets={widgets} events={events} onRemoveWidget={(id) => { void cloud.deleteWidget(id).catch(() => {}); }} onOpenBuilder={() => setActiveSheet("builder")} reports={reports.reports} idToken={idToken!} businessName={onboarding.me?.businessName ?? ""} onDeleteReport={reports.remove} hasMoreReports={reports.hasMore} loadingMoreReports={reports.loadingMore} onLoadMoreReports={() => { void reports.loadMore(); }} />
@@ -189,8 +192,15 @@ export function AuthenticatedApp() {
       </main>
       <footer className="app-footer">Powered by <strong>InnoApp</strong></footer>
       <Overlay open={activeSheet !== null} onClick={() => setActiveSheet(null)} />
-      <AiSheet hideDock open={activeSheet === "ai"} onOpen={() => setActiveSheet("ai")} onClose={() => setActiveSheet(null)} onCreateWidget={addWidget} idToken={idToken!} businessName={onboarding.me?.businessName ?? ""} onReportSaved={() => void reports.refresh()} />
+      <AiSheet hideDock open={activeSheet === "ai"} onOpen={() => setActiveSheet("ai")} onClose={() => setActiveSheet(null)} onCreateWidget={addWidget} idToken={idToken!} businessName={onboarding.me?.businessName ?? ""} profile={onboarding.me?.profile} onReportSaved={() => void reports.refresh()} />
       <WidgetBuilderSheet open={activeSheet === "builder"} onClose={() => setActiveSheet(null)} onCreate={addWidget} agents={cloud.agents} />
+      <BusinessProfileSheet
+        open={activeSheet === "profile"}
+        profile={onboarding.me?.profile}
+        businessName={onboarding.me?.businessName ?? ""}
+        onClose={() => setActiveSheet(null)}
+        onSave={onboarding.updateProfile}
+      />
       {onboardingState && !onboardingState.completedAt && (
         <OnboardingReminder connected={connected} hasTickets={cloud.tickets.length > 0} hasWidgets={cloud.widgets.length > 0} onContinue={() => setShowOnboarding(true)} />
       )}

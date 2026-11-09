@@ -6,7 +6,7 @@ import { ChatMessageContent } from "./ChatMessageContent";
 import { AttentionPanel } from "./AttentionPanel";
 import { ConversationSidebar, IconSidebar } from "./ConversationSidebar";
 import { SUGGESTED, useAssistantChat } from "./useAssistantChat";
-import type { ApiMatter } from "../../api/client";
+import type { ApiBusinessProfile, ApiMatter } from "../../api/client";
 import type { Widget } from "../../types";
 
 interface AiChatViewProps {
@@ -14,6 +14,7 @@ interface AiChatViewProps {
   onCreateWidget: (cfg: Omit<Widget, "id">) => Promise<void>;
   idToken: string;
   businessName: string;
+  profile?: ApiBusinessProfile | null;
   onReportSaved: () => void;
   /** Avisos del asesor del negocio; se muestran en la portada, antes de empezar a conversar. */
   attention?: { matters: ApiMatter[]; onMark: (id: string, status: "seen" | "dismissed") => void };
@@ -23,10 +24,10 @@ interface AiChatViewProps {
 const isNarrow = () => typeof window !== "undefined" && window.matchMedia("(max-width: 760px)").matches;
 
 /** Vista IA: conversación a pantalla completa con Innova, con el historial de conversaciones al lado. */
-export function AiChatView({ active, onCreateWidget, idToken, businessName, onReportSaved, attention }: AiChatViewProps) {
+export function AiChatView({ active, onCreateWidget, idToken, businessName, profile, onReportSaved, attention }: AiChatViewProps) {
   const list = useConversationList(idToken);
   const { messages, typing, ready, blocked, usageNotice, activeId, send, startNewConversation, openConversation } = useAssistantChat({
-    idToken, onCreateWidget, onReportSaved, persist: true, onConversationSaved: list.upsert, businessName,
+    idToken, onCreateWidget, onReportSaved, persist: true, onConversationSaved: list.upsert, businessName, profile,
   });
   const [input, setInput] = useState("");
   const [fontLevel] = useFontLevel();
