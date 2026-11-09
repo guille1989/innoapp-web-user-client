@@ -4,6 +4,7 @@ import { TextSizeControl } from "../dashboard/TextSizeControl";
 import { useFontLevel } from "../dashboard/fontScale";
 import { ChatMessageContent } from "./ChatMessageContent";
 import { SUGGESTED, useAssistantChat } from "./useAssistantChat";
+import type { ApiBusinessProfile } from "../../api/client";
 import type { Widget } from "../../types";
 
 interface AiSheetProps {
@@ -13,14 +14,15 @@ interface AiSheetProps {
   onCreateWidget: (cfg: Omit<Widget, "id">) => Promise<void>;
   idToken: string;
   businessName: string;
+  profile?: ApiBusinessProfile | null;
   /** El backend guardó un reporte nuevo: la lista de Reportes y el widget del dashboard se refrescan. */
   onReportSaved: () => void;
   /** Oculta el campo flotante: la entrada al asistente es la vista IA. */
   hideDock?: boolean;
 }
 
-export function AiSheet({ open, onOpen, onClose, onCreateWidget, idToken, businessName, onReportSaved, hideDock }: AiSheetProps) {
-  const { messages, typing, blocked, usageNotice, send } = useAssistantChat({ idToken, onCreateWidget, onReportSaved, businessName });
+export function AiSheet({ open, onOpen, onClose, onCreateWidget, idToken, businessName, profile, onReportSaved, hideDock }: AiSheetProps) {
+  const { messages, typing, blocked, usageNotice, send } = useAssistantChat({ idToken, onCreateWidget, onReportSaved, businessName, profile });
   const [fontLevel, setFontLevel] = useFontLevel();
   const [input, setInput] = useState("");
   const [dockInput, setDockInput] = useState("");

@@ -11,6 +11,8 @@ interface TopBarProps {
   active: AppView;
   onChange: (view: AppView) => void;
   onOpenGuide: () => void;
+  /** Abre la hoja de ficha del negocio (moneda, horarios, rubro). */
+  onOpenBusinessProfile?: () => void;
   /** Avisos que la persona todavía no vio: se muestran como contador en la pestaña IA. */
   attentionCount?: number;
   /** Interruptor de la beta: solo los negocios con la vista nueva ven la pestaña de Innova. */
@@ -34,7 +36,7 @@ function IconMoon() {
   );
 }
 
-export function TopBar({ active, onChange, onOpenGuide, attentionCount = 0, showAdvisorView = false }: TopBarProps) {
+export function TopBar({ active, onChange, onOpenGuide, onOpenBusinessProfile, attentionCount = 0, showAdvisorView = false }: TopBarProps) {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -91,6 +93,11 @@ export function TopBar({ active, onChange, onOpenGuide, attentionCount = 0, show
             </div>
             {active === "dashboard" && <PeriodControl variant="popover" />}
             <TextSizeControl className="popover-text-size" level={fontLevel} onChange={setFontLevel} label="Tamaño del texto" />
+            {onOpenBusinessProfile && (
+              <button role="menuitem" onClick={() => { setOpen(false); onOpenBusinessProfile(); }}>
+                Ficha del negocio <span>✎</span>
+              </button>
+            )}
             <button role="menuitem" onClick={() => { setOpen(false); onOpenGuide(); }}>Guía de la aplicación <span>?</span></button>
             <button role="menuitem" onClick={logout}>Cerrar sesión <span>↗</span></button>
           </div>

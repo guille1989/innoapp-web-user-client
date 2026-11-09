@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { api, ApiError, type ApiAssistantHistoryTurn, type ApiConversation, type ApiConversationSummary, type ApiWidgetDraft } from "../../api/client";
+import { api, ApiError, type ApiAssistantHistoryTurn, type ApiBusinessProfile, type ApiConversation, type ApiConversationSummary, type ApiWidgetDraft } from "../../api/client";
 import { respondLocally } from "../../lib/aiAssistant";
+import { profileCopyHint } from "../../lib/businessProfile";
 import {
   conversationCreatedAt, conversationSignature, deriveTitle, newConversationId, readActiveConversation, toStoredMessages, writeActiveConversation, type ChatMessage,
 } from "../../lib/conversation";
@@ -39,12 +40,12 @@ function draftToWidget(draft: ApiWidgetDraft): Omit<Widget, "id"> {
   };
 }
 
-function greeting(businessName?: string): ChatMessage {
+function greeting(businessName?: string, profile?: ApiBusinessProfile | null): ChatMessage {
   const where = businessName?.trim() ? businessName.trim() : "tu negocio";
   return {
     id: msgSeq++,
     role: "ai",
-    text: `Hola, soy **Innova**, tu especialista en ${where}. Puedo ayudarte con ventas, sucursales, avisos y widgets.`,
+    text: `Hola, soy **Innova**, tu especialista en ${where}.${profileCopyHint(profile)} Puedo ayudarte con ventas, sucursales, avisos y widgets.`,
     transient: true,
   };
 }
@@ -60,12 +61,14 @@ interface UseAssistantChatOptions {
   onConversationSaved?: (summary: ApiConversationSummary) => void;
   /** Nombre del negocio para el saludo (GET /me). */
   businessName?: string;
+  /** Ficha del negocio (moneda/horarios) para el saludo cuando existen. */
+  profile?: ApiBusinessProfile | null;
 }
 
 /** Estado y envío de la conversación con Innova; lo comparten el panel flotante y la vista IA. */
-export function useAssistantChat({ idToken, onCreateWidget, onReportSaved, persist = false, onConversationSaved, businessName }: UseAssistantChatOptions) {
+export function useAssistantChat({ idToken, onCreateWidget, onReportSaved, persist = false, onConversationSaved, businessName, profile }: UseAssistantChatOptions) {
   const scope = useRequestScope(idToken);
-  const [messages, setMessages] = useState<ChatMessage[]>(() => [greeting(businessName)]);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => [greeting(businessName, profile)]);
   const [typing, setTyping] = useState(false);
   // Solo los intercambios que de verdad pasaron por el asistente (Bedrock) —
   // las respuestas locales (regex, crear widgets) no cuentan como
@@ -105,7 +108,7 @@ export function useAssistantChat({ idToken, onCreateWidget, onReportSaved, persi
     conversationId.current = conversation.conversationId;
     setActiveId(conversation.conversationId);
     lastSaved.current = conversationSignature(conversation.conversationId, conversation.messages, conversation.history);
-    setMessages([greeting(businessName), ...conversation.messages.map((m): ChatMessage => ({ id: msgSeq++, role: m.role, text: m.text, ...(m.reportId ? { reportId: m.reportId } : {}) }))]);
+    setMessages([greeting(businessName, profile), ...conversation.messages.map((m): ChatMessage => ({ id: msgSeq++, role: m.role, text: m.text, ...(m.reportId ? { reportId: m.reportId } : {}) }))]);
     setHistory(conversation.history);
     for (const message of conversation.messages) {
       if (!message.reportId) continue;
@@ -255,7 +258,7 @@ export function useAssistantChat({ idToken, onCreateWidget, onReportSaved, persi
     writeActiveConversation(null);
     setReady(true);
     setTyping(false);
-    setMessages([greeting(businessName)]);
+    setMessages([greeting(businessName, profile)]);
     setHistory([]);
   }
 

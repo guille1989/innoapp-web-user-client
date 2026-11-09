@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import type { ApiMatter } from "../../api/client";
+import type { ApiBusinessProfile, ApiMatter } from "../../api/client";
 import { useSpeechInput } from "../../hooks/useSpeechInput";
 import { useSpeechOutput } from "../../hooks/useSpeechOutput";
 import { useVoiceSettings } from "../../hooks/useVoiceSettings";
@@ -24,6 +24,8 @@ interface InnovaViewProps {
   /** Avisos del asesor del negocio: solo marcan el estado del núcleo y el contador; aquí no se listan. */
   matters: ApiMatter[];
   onOpenClassic: () => void;
+  businessName?: string;
+  profile?: ApiBusinessProfile | null;
 }
 
 /**
@@ -34,9 +36,9 @@ interface InnovaViewProps {
  * para escribir. Se ve solo en los negocios con el interruptor encendido. La conversación no
  * se guarda: para leerla o escribirle está el chat clásico, que sigue intacto.
  */
-export function InnovaView({ active, idToken, onCreateWidget, onReportSaved, matters, onOpenClassic }: InnovaViewProps) {
+export function InnovaView({ active, idToken, onCreateWidget, onReportSaved, matters, onOpenClassic, businessName, profile }: InnovaViewProps) {
   const { messages, typing, ready, blocked, usageNotice, send } = useAssistantChat({
-    idToken, onCreateWidget, onReportSaved, persist: false,
+    idToken, onCreateWidget, onReportSaved, persist: false, businessName, profile,
   });
   // Voz: el núcleo late con el volumen (micrófono o voz de Innova) leído desde este ref.
   const levelRef = useRef(0);
