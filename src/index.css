@@ -365,28 +365,76 @@ button { border: 0; background: none; cursor: pointer; }
 /* Innova (beta): vista del asistente con presencia. */
 .beta-tag { margin-left: 5px; padding: 1px 5px; border-radius: 999px; background: rgba(var(--violet-rgb), .18); color: var(--violet); font-size: 8px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; vertical-align: middle; }
 .innova.view.active { position: absolute; inset: 0; display: flex; flex-direction: column; }
-.innova > :not(.canvas-grid):not(.canvas-vignette) { position: relative; z-index: 1; }
+.innova > :not(.canvas-grid):not(.canvas-vignette):not(.innova-glow):not(.innova-stream) { position: relative; z-index: 1; }
 .innova-scroll { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; align-items: center; padding: calc(68px + env(safe-area-inset-top)) 16px 12px; }
 .innova-head { align-self: stretch; width: min(780px, 100%); margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.innova-beta { color: var(--muted); font-size: calc(12px * var(--afs, 1)); font-weight: 600; letter-spacing: .12em; text-transform: uppercase; }
-.innova-beta em { margin-left: 4px; padding: 1px 6px; border-radius: 999px; background: rgba(var(--violet-rgb), .18); color: var(--violet); font-style: normal; font-size: .85em; }
+.innova-beta { color: var(--muted); font: 700 calc(12px * var(--afs, 1)) "JetBrains Mono", monospace; letter-spacing: .15em; text-transform: uppercase; }
+.innova-beta em { margin-left: 6px; padding: 3px 6px; border: 1px solid rgba(var(--violet-rgb), .22); border-radius: 3px; background: rgba(var(--violet-rgb), .15); color: var(--violet); font-style: normal; font-size: .72em; letter-spacing: .12em; vertical-align: 1px; }
 .innova-link { color: var(--muted); font-size: calc(12px * var(--afs, 1)); text-decoration: underline; text-underline-offset: 3px; transition: .15s; }
 .innova-link:hover { color: var(--teal); }
+.innova-head .innova-link { padding-bottom: 4px; border-bottom: 1px solid rgba(var(--ink-rgb), .16); text-decoration: none; }
+.innova-head .innova-link:hover { border-color: var(--teal); }
+.innova-head .innova-link span { margin-left: 4px; color: rgba(var(--teal-rgb), .7); }
 .innova-orb { display: block; width: 100%; height: 100%; }
-.innova-status { margin: 0; min-height: 18px; color: var(--teal); font-size: calc(11px * var(--afs, 1)); font-weight: 600; letter-spacing: .14em; text-transform: uppercase; text-align: center; }
-.innova-greeting { margin: 6px 0 0; font-size: calc(clamp(18px, 4vw, 24px) * var(--afs, 1)); font-weight: 700; letter-spacing: -.01em; text-align: center; }
-.innova-sub { margin: 6px 0 14px; max-width: 560px; color: var(--muted); font-size: calc(13.5px * var(--afs, 1)); line-height: 1.55; text-align: center; }
+/* Nucleo: el canvas dibuja anillos y marcas; el isotipo de Innova va al centro y late con la voz. */
+.innova-orb-stack { position: relative; display: block; width: 100%; height: 100%; filter: drop-shadow(0 0 34px rgba(var(--teal-rgb), .1)); }
+.innova-orb-logo { position: absolute; top: 50%; left: 50%; width: 27%; margin: -13.5% 0 0 -13.5%; pointer-events: none; user-select: none; filter: drop-shadow(0 0 9px rgba(var(--teal-rgb), .45)); will-change: transform; }
+/* Escenario del nucleo: lecturas a los lados, como en el diseno. */
+.innova-stage { position: relative; align-self: stretch; display: flex; justify-content: center; width: min(920px, 100%); margin: 0 auto; }
+.innova-telemetry { position: absolute; top: 40%; display: grid; width: 132px; color: rgba(var(--teal-rgb), .55); font-family: "JetBrains Mono", monospace; letter-spacing: .08em; pointer-events: none; }
+.innova-telemetry::before { content: ""; position: absolute; top: 24px; width: 42px; height: 1px; background: linear-gradient(90deg, rgba(var(--teal-rgb), .5), transparent); }
+.innova-telemetry small { font-size: calc(9px * var(--afs, 1)); }
+.innova-telemetry strong { margin: 6px 0; color: rgba(var(--teal-rgb), .85); font-size: calc(19px * var(--afs, 1)); font-weight: 400; }
+.innova-telemetry span { font-size: calc(9px * var(--afs, 1)); }
+.innova-telemetry--left { left: 0; }
+.innova-telemetry--left::before { left: 142px; }
+.innova-telemetry--right { right: 0; text-align: right; }
+.innova-telemetry--right::before { right: 142px; transform: scaleX(-1); }
+/* Fondo del diseno: puntos con mascara radial, un resplandor tras el nucleo y dos hilos laterales con destellos. */
+.innova .canvas-grid { opacity: .6; -webkit-mask-image: radial-gradient(ellipse at 50% 38%, #000 6%, transparent 78%); mask-image: radial-gradient(ellipse at 50% 38%, #000 6%, transparent 78%); }
+.innova-glow { position: absolute; z-index: 0; top: 70px; left: 50%; width: min(780px, 80vw); height: 560px; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(ellipse, rgba(var(--teal-rgb), .08), transparent 65%); filter: blur(15px); pointer-events: none; }
+.innova-stream { position: absolute; z-index: 0; top: 110px; bottom: 140px; width: 1px; background: linear-gradient(transparent, rgba(var(--teal-2-rgb), .22) 35%, rgba(var(--teal-2-rgb), .08), transparent); pointer-events: none; }
+.innova-stream--left { left: 34px; }
+.innova-stream--right { right: 34px; }
+.innova-stream span { position: absolute; left: -1px; width: 3px; height: 18px; background: linear-gradient(transparent, var(--teal), transparent); box-shadow: 0 0 8px var(--teal); opacity: 0; animation: innova-fall 5s linear infinite; }
+.innova-stream span:nth-child(2) { animation-delay: 1.8s; }
+.innova-stream span:nth-child(3) { animation-delay: 3.6s; }
+.innova-stream--right span { animation-direction: reverse; }
+@keyframes innova-fall { 0% { top: 0; opacity: 0; } 15%, 80% { opacity: .5; } 100% { top: 100%; opacity: 0; } }
+@keyframes innova-pulse { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+@keyframes innova-listen { from { transform: scale(.8); opacity: 1; } to { transform: scale(1.4); opacity: 0; } }
+.innova-status { margin: 0; min-height: 18px; display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--teal); font: 700 calc(11px * var(--afs, 1)) "JetBrains Mono", monospace; letter-spacing: .22em; text-transform: uppercase; text-align: center; text-shadow: 0 0 12px rgba(var(--teal-rgb), .35); }
+.innova-status i { width: 18px; height: 1px; background: linear-gradient(90deg, transparent, rgba(var(--teal-rgb), .7)); }
+.innova-status i:last-child { transform: scaleX(-1); }
+.innova-eyebrow { margin: 14px 0 0; color: var(--dim); font: 400 calc(10px * var(--afs, 1)) "JetBrains Mono", monospace; letter-spacing: .32em; text-transform: uppercase; text-align: center; }
+.innova-greeting { margin: 8px 0 0; font-size: calc(clamp(22px, 4vw, 32px) * var(--afs, 1)); font-weight: 600; letter-spacing: -.035em; text-align: center; }
+.innova-greeting span { color: var(--teal); text-shadow: 0 0 20px rgba(var(--teal-rgb), .2); }
+.innova-sub { margin: 8px 0 10px; max-width: 560px; color: var(--muted); font-size: calc(13.5px * var(--afs, 1)); line-height: 1.55; text-align: center; }
 .innova-question { margin: 4px 0 8px; max-width: 680px; color: var(--muted); font-size: calc(13px * var(--afs, 1)); text-align: center; }
 .innova-question::before { content: "“"; }
 .innova-question::after { content: "”"; }
-.innova-answer { width: min(760px, 100%); max-height: 38vh; overflow-y: auto; margin: 0 auto 14px; padding: 14px 18px; border-radius: 16px; font-size: calc(14px * var(--afs, 1)); line-height: 1.6; }
-.innova-composer { width: min(780px, 100%); margin: 0 auto; padding: 8px 20px calc(24px + env(safe-area-inset-bottom)); }
-.innova-input { display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 20px; border-radius: 999px; }
+.innova-summary { display: inline-flex; align-items: center; gap: 7px; margin: 0 0 14px; padding: 5px 0; border-bottom: 1px solid rgba(var(--ink-rgb), .18); color: var(--muted); font-size: calc(11.5px * var(--afs, 1)); transition: .18s; }
+.innova-summary:hover { border-color: var(--teal); color: var(--teal); }
+.innova-summary svg { width: 13px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.5; }
+.innova-answer { width: min(760px, 100%); max-height: 38vh; overflow-y: auto; margin: 0 auto 14px; padding: 14px 18px; border-radius: 16px; border-color: rgba(var(--teal-rgb), .16); font-size: calc(14px * var(--afs, 1)); line-height: 1.6; }
+.innova-composer { width: min(820px, 100%); margin: 0 auto; padding: 8px 20px calc(14px + env(safe-area-inset-bottom)); }
+.innova-readout { display: flex; align-items: center; justify-content: center; gap: 9px; margin-bottom: 10px; color: var(--dim); font: 400 calc(9.5px * var(--afs, 1)) "JetBrains Mono", monospace; letter-spacing: .09em; text-transform: uppercase; }
+.innova-readout i { width: 4px; height: 4px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 8px var(--teal); animation: innova-pulse 2s ease-in-out infinite; }
+.innova-readout span { max-width: 50vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.innova-readout time { padding-left: 9px; border-left: 1px solid var(--border); color: rgba(var(--teal-rgb), .7); }
+.innova-powered { margin-top: 9px; color: var(--dim); font: 400 calc(9px * var(--afs, 1)) "JetBrains Mono", monospace; letter-spacing: .08em; text-align: center; }
+.innova-powered strong { color: rgba(var(--teal-rgb), .7); font-weight: 400; }
+.innova-input { position: relative; display: flex; align-items: center; gap: 10px; min-height: 62px; padding: 8px 10px 8px 12px; border-radius: 20px; transition: border-color .2s, box-shadow .2s; }
+.innova-input::before { content: ""; position: absolute; top: -1px; left: 9%; width: 25%; height: 1px; background: linear-gradient(90deg, transparent, rgba(var(--teal-rgb), .45), transparent); pointer-events: none; }
+.innova-input.is-listening { border-color: rgba(var(--teal-rgb), .4); box-shadow: 0 0 30px rgba(var(--teal-rgb), .1), 0 12px 44px rgba(var(--shade-rgb), .38); }
+.innova-shortcut { flex: none; padding: 4px 6px; border: 1px solid var(--border); border-radius: 4px; color: var(--dim); font: 400 calc(10px * var(--afs, 1)) "JetBrains Mono", monospace; }
+@media (pointer: coarse), (max-width: 560px) { .innova-shortcut { display: none; } }
+@media (max-width: 820px) { .innova-telemetry, .innova-stream { display: none; } }
 .innova-input > input[type="text"] { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: inherit; font: inherit; font-size: calc(14px * var(--afs, 1)); padding: 8px 0; }
 .innova-input .ai-send { width: 40px; height: 40px; border-radius: 50%; }
 .innova-input .ai-send:disabled { opacity: .4; cursor: default; }
 @media (pointer: coarse) { .innova-input > input[type="text"] { font-size: max(16px, calc(14px * var(--afs, 1))); } }
-@media (prefers-reduced-motion: reduce) { .beta-tag { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .beta-tag { transition: none; } .innova-stream span, .innova-readout i, .innova-mic[aria-pressed="true"]::after { animation: none; } }
 .innova-status[data-state="thinking"] { color: var(--violet); }
 .innova-status[data-state="alert"] { color: var(--amber); }
 /* El contenedor se desplaza; sus hijos no se comprimen (una respuesta con tabla quedaba en una línea). */
@@ -399,9 +447,11 @@ button { border: 0; background: none; cursor: pointer; }
 .innova-error { margin: 4px 0 0; max-width: 560px; color: var(--amber); font-size: calc(12.5px * var(--afs, 1)); text-align: center; }
 .innova-question.live { color: var(--text); }
 .innova-after { display: flex; gap: 18px; justify-content: center; margin-bottom: 14px; }
-.innova-mic { flex: none; width: 40px; height: 40px; display: grid; place-items: center; border: 1px solid rgba(var(--teal-rgb), .45); border-radius: 50%; background: var(--teal-dim); color: var(--teal); transition: box-shadow .2s, background .2s; }
+.innova-mic { position: relative; flex: none; width: 40px; height: 40px; display: grid; place-items: center; border: 1px solid rgba(var(--teal-rgb), .45); border-radius: 50%; background: var(--teal-dim); color: var(--teal); transition: box-shadow .2s, background .2s; }
 .innova-mic svg { width: 18px; }
+.innova-mic:hover:not(:disabled) { border-color: var(--teal); box-shadow: 0 0 18px rgba(var(--teal-rgb), .18); }
 .innova-mic[aria-pressed="true"] { background: rgba(var(--teal-rgb), .3); box-shadow: 0 0 0 5px rgba(var(--teal-rgb), .14), 0 0 22px rgba(var(--teal-rgb), .45); }
+.innova-mic[aria-pressed="true"]::after { content: ""; position: absolute; inset: -6px; border: 1px solid rgba(var(--teal-rgb), .45); border-radius: 50%; animation: innova-listen 1.4s ease-out infinite; }
 .innova-mic:disabled { opacity: .4; cursor: default; }
 .innova-settings { position: relative; flex: none; }
 .innova-settings summary { list-style: none; padding: 6px 10px; border-radius: 999px; color: var(--muted); font-size: calc(12px * var(--afs, 1)); cursor: pointer; }
@@ -412,3 +462,4 @@ button { border: 0; background: none; cursor: pointer; }
 .innova-settings-pop label.check { display: flex; align-items: flex-start; gap: 8px; color: var(--text); }
 .innova-settings-pop select { width: 100%; padding: 7px 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--field-bg); color: var(--text); font: inherit; }
 .innova-settings-pop input[type="range"] { width: 100%; }
+@media (max-width: 560px) { .innova-status { letter-spacing: .12em; font-size: calc(10px * var(--afs, 1)); } .innova-eyebrow { letter-spacing: .22em; } }

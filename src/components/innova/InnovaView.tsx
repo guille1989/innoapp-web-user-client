@@ -4,6 +4,7 @@ import { useSpeechInput } from "../../hooks/useSpeechInput";
 import { useSpeechOutput } from "../../hooks/useSpeechOutput";
 import { useVoiceSettings } from "../../hooks/useVoiceSettings";
 import { ASSISTANT_NAME, briefingSpoken, greetingFor, ORB_STATE_LABEL, orbStateFor } from "../../lib/innova";
+import { countUnseen } from "../../lib/matters";
 import { SPEECH_LANGS, speakableText } from "../../lib/speech";
 import { AttentionPanel } from "../ai/AttentionPanel";
 import { ChatMessageContent } from "../ai/ChatMessageContent";
@@ -11,6 +12,18 @@ import { useAssistantChat } from "../ai/useAssistantChat";
 import { IconAi, IconSend } from "../icons";
 import type { Widget } from "../../types";
 import { InnovaOrb } from "./InnovaOrb";
+
+const SoundIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M11 5 6.5 9H3v6h3.5l4.5 4V5Z" />
+    <path d="M15 9a4 4 0 0 1 0 6M17.5 6.5a7.5 7.5 0 0 1 0 11" />
+  </svg>
+);
+
+/** Líneas de datos del diseño: dos hilos verticales con destellos que caen. Solo decoración. */
+const DataStream = ({ side }: { side: "left" | "right" }) => (
+  <div className={`innova-stream innova-stream--${side}`} aria-hidden="true"><span /><span /><span /></div>
+);
 
 interface InnovaViewProps {
   active: boolean;
@@ -36,6 +49,8 @@ export function InnovaView({ active, idToken, businessName, onCreateWidget, onRe
     idToken, onCreateWidget, onReportSaved, persist: false,
   });
   const [input, setInput] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [clock, setClock] = useState(() => new Date());
   const [openedAt] = useState(() => new Date());
   const greeting = useMemo(() => greetingFor(openedAt, matters), [openedAt, matters]);
 
@@ -87,11 +102,20 @@ export function InnovaView({ active, idToken, businessName, onCreateWidget, onRe
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [typing]);
 
-  // Al salir de la pestaña, Innova se calla y deja de escuchar. Con Escape, también.
+  // La hora de la línea de estado: se actualiza solo mientras la vista se ve.
+  useEffect(() => {
+    if (!active) return;
+    setClock(new Date());
+    const timer = window.setInterval(() => setClock(new Date()), 30_000);
+    return () => window.clearInterval(timer);
+  }, [active]);
+
+  // Al salir de la pestaña, Innova se calla y deja de escuchar. Con Escape, también. Ctrl/⌘ + K lleva al campo de texto.
   useEffect(() => {
     if (!active) { speech.cancel(); listen.abort(); return; }
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") { speech.cancel(); listen.abort(); }
+      else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") { event.preventDefault(); inputRef.current?.focus(); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -112,26 +136,50 @@ export function InnovaView({ active, idToken, businessName, onCreateWidget, onRe
   }
 
   const hint = listen.interim || (listen.listening ? "" : lastQuestion?.text);
+  const unseen = countUnseen(matters);
+  const clockText = clock.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit", hour12: false });
+  const shortcut = typeof navigator !== "undefined" && /mac|iphone|ipad/i.test(navigator.platform || navigator.userAgent) ? "⌘ K" : "Ctrl K";
+  // "Buenas tardes. Soy Innova." → el nombre se resalta, como en el diseño.
+  const nameAt = greeting.headline.lastIndexOf(`${ASSISTANT_NAME}.`);
   const orbLabel = listen.listening ? "Dejar de escuchar" : speech.speaking ? "Callar a Innova" : "Hablar con Innova";
 
   return (
     <section className={`innova view${active ? " active" : ""}${exchange.length > 0 ? " has-exchange" : ""}`} aria-label={ASSISTANT_NAME}>
       <div className="canvas-grid" />
       <div className="canvas-vignette" />
+      <div className="innova-glow" aria-hidden="true" />
+      <DataStream side="left" />
+      <DataStream side="right" />
       <div className="innova-scroll">
         <div className="innova-head">
           <span className="innova-beta">{ASSISTANT_NAME} <em>beta</em></span>
-          <button type="button" className="innova-link" onClick={onOpenClassic}>Ir al chat clásico</button>
+          <button type="button" className="innova-link" onClick={onOpenClassic}>Ir al chat clásico <span aria-hidden="true">↗</span></button>
         </div>
 
-        <button type="button" className="innova-orb-btn" onClick={onOrbClick} aria-label={orbLabel} title={orbLabel}>
-          <InnovaOrb state={orbState} levelRef={levelRef} />
-        </button>
-        <p className="innova-status" data-state={orbState} role="status">{ORB_STATE_LABEL[orbState]}</p>
-        <h1 className="innova-greeting">{greeting.headline}</h1>
+        <div className="innova-stage">
+          <div className="innova-telemetry innova-telemetry--left" aria-hidden="true">
+            <small>ENTRADA</small>
+            <strong>{listen.supported ? "VOZ" : "TEXTO"}</strong>
+            <span>{listen.supported ? voice.lang : "SOLO ESCRITURA"}</span>
+          </div>
+          <div className="innova-telemetry innova-telemetry--right" aria-hidden="true">
+            <small>AVISOS</small>
+            <strong>{String(unseen).padStart(2, "0")}</strong>
+            <span>{unseen === 0 ? "AL DÍA" : "POR REVISAR"}</span>
+          </div>
+          <button type="button" className="innova-orb-btn" onClick={onOrbClick} aria-label={orbLabel} title={orbLabel}>
+            <InnovaOrb state={orbState} levelRef={levelRef} />
+          </button>
+        </div>
+
+        <p className="innova-status" data-state={orbState} role="status"><i aria-hidden="true" />{ORB_STATE_LABEL[orbState]}<i aria-hidden="true" /></p>
+        <p className="innova-eyebrow">Asistente de inteligencia</p>
+        <h1 className="innova-greeting">
+          {nameAt >= 0 ? <>{greeting.headline.slice(0, nameAt)}<span>{greeting.headline.slice(nameAt)}</span></> : greeting.headline}
+        </h1>
         <p className="innova-sub">{greeting.sub}</p>
         {speech.supported && !speech.speaking && (
-          <button type="button" className="innova-link" onClick={() => void speech.speak(briefingSpoken(greeting, matters))}>Escuchar el resumen</button>
+          <button type="button" className="innova-summary" onClick={() => void speech.speak(briefingSpoken(greeting, matters))}><SoundIcon />Escuchar el resumen</button>
         )}
 
         {listen.error && <p className="innova-error" role="alert">{listen.error}</p>}
@@ -154,7 +202,12 @@ export function InnovaView({ active, idToken, businessName, onCreateWidget, onRe
       <div className="innova-composer">
         {usageNotice && <div className="ai-chat-usage" role="status">{usageNotice}</div>}
         {!listen.supported && <div className="ai-chat-usage">Para hablarle a {ASSISTANT_NAME} usa Chrome o Edge. Mientras tanto puedes escribirle.</div>}
-        <form className="innova-input glass" onSubmit={(e) => { e.preventDefault(); ask(input); }}>
+        <div className="innova-readout" aria-hidden="true">
+          <i />
+          <span>{businessName}</span>
+          <time dateTime={clock.toISOString()}>{clockText}</time>
+        </div>
+        <form className={`innova-input glass${listen.listening ? " is-listening" : ""}`} onSubmit={(e) => { e.preventDefault(); ask(input); }}>
           <button
             type="button"
             className="innova-mic"
@@ -167,12 +220,14 @@ export function InnovaView({ active, idToken, businessName, onCreateWidget, onRe
             <IconAi />
           </button>
           <input
+            ref={inputRef}
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={blocked ? "Espera un momento para volver a preguntar…" : `Pregúntale a ${ASSISTANT_NAME} sobre tus datos…`}
             aria-label={`Mensaje para ${ASSISTANT_NAME}`}
           />
+          <kbd className="innova-shortcut" aria-hidden="true">{shortcut}</kbd>
           <button type="submit" className="ai-send" aria-label="Enviar" disabled={!input.trim() || typing || !ready}><IconSend /></button>
           <details className="innova-settings">
             <summary aria-label="Ajustes de voz" title="Ajustes de voz">Voz</summary>
@@ -196,6 +251,7 @@ export function InnovaView({ active, idToken, businessName, onCreateWidget, onRe
             </div>
           </details>
         </form>
+        <p className="innova-powered">POWERED BY <strong>INNOAPP</strong></p>
       </div>
     </section>
   );

@@ -33,12 +33,14 @@ interface InnovaOrbProps {
 }
 
 /**
- * El núcleo animado de Innova. Dibuja en un canvas 2D (sin dependencias) con los colores del tema:
+ * El núcleo animado de Innova: anillos, marcas y chispas en un canvas 2D con el isotipo de Innova al centro
+ * (diseño de Figma). Sin dependencias; usa los colores del tema:
  * en oscuro suma luz sobre el fondo; en claro dibuja con tinta, porque la luz sumada sobre blanco
  * no se vería. Respeta `prefers-reduced-motion` y se detiene solo cuando la pestaña no se ve.
  */
 export function InnovaOrb({ state, level = 0, levelRef }: InnovaOrbProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const logoRef = useRef<HTMLImageElement>(null);
   // El bucle de dibujo lee siempre lo último desde acá, sin reiniciarse en cada cambio de estado.
   const live = useRef({ state, level, levelRef });
   live.current = { state, level, levelRef };
@@ -127,21 +129,26 @@ export function InnovaOrb({ state, level = 0, levelRef }: InnovaOrbProps) {
         ctx.beginPath(); ctx.arc(cx + Math.cos(s.a) * rr, cy + Math.sin(s.a) * rr, 1 + s.z * 1.6, 0, Math.PI * 2); ctx.fill();
       }
 
+      // Esfera del diseño: un disco oscuro y translúcido con borde fino; el isotipo va encima (imagen) y late con la voz.
       ctx.globalCompositeOperation = "source-over";
-      const core = base * (1 + 0.035 * Math.sin((t / 900) * motion) + level * 0.14);
-      const sphere = ctx.createRadialGradient(cx - core * 0.3, cy - core * 0.35, core * 0.08, cx, cy, core);
-      sphere.addColorStop(0, "rgba(255,255,255,0.97)"); sphere.addColorStop(0.28, rgba(0.96));
-      const shade = light ? 0.55 : 0.25;
-      sphere.addColorStop(1, `rgba(${Math.round(r * shade)},${Math.round(g * shade)},${Math.round(b * (light ? 0.7 : 0.45))},0.96)`);
-      ctx.fillStyle = sphere; ctx.beginPath(); ctx.arc(cx, cy, core, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = rgba(0.7); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, core, 0, Math.PI * 2); ctx.stroke();
+      const core = base * (1 + 0.035 * Math.sin((t / 900) * motion) + level * 0.1);
+      const dial = ctx.createRadialGradient(cx, cy, core * 0.2, cx, cy, core);
+      dial.addColorStop(0, rgba(light ? 0.1 : 0.2)); dial.addColorStop(1, rgba(light ? 0.03 : 0.05));
+      ctx.fillStyle = dial; ctx.beginPath(); ctx.arc(cx, cy, core, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = rgba(0.45 + level * 0.3); ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(cx, cy, core, 0, Math.PI * 2); ctx.stroke();
+      if (logoRef.current) logoRef.current.style.transform = `scale(${(0.97 + 0.03 * Math.sin((t / 900) * motion) + level * 0.12).toFixed(3)})`;
     };
     raf = requestAnimationFrame(draw);
 
     return () => { cancelAnimationFrame(raf); resizeObserver.disconnect(); observer.disconnect(); };
   }, []);
 
-  return <canvas ref={canvasRef} className="innova-orb" role="img" aria-label={`Innova: ${ORB_STATE_LABEL[state].replace("…", "")}`} />;
+  return (
+    <span className="innova-orb-stack">
+      <canvas ref={canvasRef} className="innova-orb" role="img" aria-label={`Innova: ${ORB_STATE_LABEL[state].replace("…", "")}`} />
+      <img ref={logoRef} className="innova-orb-logo" src="/brand/innova-isotype.svg" alt="" draggable={false} />
+    </span>
+  );
 }
 
 function paletteFor(root: HTMLElement): Record<OrbState, Rgb> {
