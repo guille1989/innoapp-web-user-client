@@ -365,9 +365,10 @@ button { border: 0; background: none; cursor: pointer; }
 /* Innova (beta): vista del asistente con presencia. */
 .beta-tag { margin-left: 5px; padding: 1px 5px; border-radius: 999px; background: rgba(var(--violet-rgb), .18); color: var(--violet); font-size: 8px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; vertical-align: middle; }
 .innova.view.active { position: absolute; inset: 0; display: flex; flex-direction: column; }
-.innova > :not(.canvas-grid):not(.canvas-vignette):not(.innova-glow):not(.innova-stream) { position: relative; z-index: 1; }
-.innova-scroll { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; align-items: center; padding: calc(68px + env(safe-area-inset-top)) 16px 12px; }
-.innova-head { align-self: stretch; width: min(780px, 100%); margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.innova > :not(.canvas-grid):not(.canvas-vignette):not(.innova-glow):not(.innova-stream):not(.innova-head) { position: relative; z-index: 1; }
+.innova-center { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 36px 16px 0; }
+.innova-head-actions { display: flex; align-items: center; gap: 14px; }
+.innova-head { position: absolute; z-index: 2; top: 0; left: 0; right: 0; width: min(920px, 100%); margin: 0 auto; padding: calc(68px + env(safe-area-inset-top)) 16px 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .innova-beta { color: var(--muted); font: 700 calc(12px * var(--afs, 1)) "JetBrains Mono", monospace; letter-spacing: .15em; text-transform: uppercase; }
 .innova-beta em { margin-left: 6px; padding: 3px 6px; border: 1px solid rgba(var(--violet-rgb), .22); border-radius: 3px; background: rgba(var(--violet-rgb), .15); color: var(--violet); font-style: normal; font-size: .72em; letter-spacing: .12em; vertical-align: 1px; }
 .innova-link { color: var(--muted); font-size: calc(12px * var(--afs, 1)); text-decoration: underline; text-underline-offset: 3px; transition: .15s; }
@@ -377,11 +378,12 @@ button { border: 0; background: none; cursor: pointer; }
 .innova-head .innova-link span { margin-left: 4px; color: rgba(var(--teal-rgb), .7); }
 .innova-orb { display: block; width: 100%; height: 100%; }
 /* Nucleo: el canvas dibuja anillos y marcas; el isotipo de Innova va al centro y late con la voz. */
-.innova-orb-stack { position: relative; display: block; width: 100%; height: 100%; filter: drop-shadow(0 0 34px rgba(var(--teal-rgb), .1)); }
-.innova-orb-logo { position: absolute; top: 50%; left: 50%; width: 27%; margin: -13.5% 0 0 -13.5%; pointer-events: none; user-select: none; filter: drop-shadow(0 0 9px rgba(var(--teal-rgb), .45)); will-change: transform; }
+.innova-orb-stack { position: relative; display: block; width: 100%; height: 100%; container-type: size; filter: drop-shadow(0 0 34px rgba(var(--teal-rgb), .1)); }
+/* Centrado con inset + margin auto: el isotipo no es cuadrado (840×660) y el lienzo tampoco; un margen negativo en % se calcula sobre el ancho y lo descuadraba en vertical. */
+.innova-orb-logo { position: absolute; inset: 0; width: min(27cqw, 27cqh); height: auto; margin: auto; pointer-events: none; user-select: none; filter: drop-shadow(0 0 9px rgba(var(--teal-rgb), .45)); will-change: transform; }
 /* Escenario del nucleo: lecturas a los lados, como en el diseno. */
 .innova-stage { position: relative; align-self: stretch; display: flex; justify-content: center; width: min(920px, 100%); margin: 0 auto; }
-.innova-telemetry { position: absolute; top: 40%; display: grid; width: 132px; color: rgba(var(--teal-rgb), .55); font-family: "JetBrains Mono", monospace; letter-spacing: .08em; pointer-events: none; }
+.innova-telemetry { position: absolute; top: 44%; display: grid; width: 132px; color: rgba(var(--teal-rgb), .55); font-family: "JetBrains Mono", monospace; letter-spacing: .08em; pointer-events: none; }
 .innova-telemetry::before { content: ""; position: absolute; top: 24px; width: 42px; height: 1px; background: linear-gradient(90deg, rgba(var(--teal-rgb), .5), transparent); }
 .innova-telemetry small { font-size: calc(9px * var(--afs, 1)); }
 .innova-telemetry strong { margin: 6px 0; color: rgba(var(--teal-rgb), .85); font-size: calc(19px * var(--afs, 1)); font-weight: 400; }
@@ -391,8 +393,8 @@ button { border: 0; background: none; cursor: pointer; }
 .innova-telemetry--right { right: 0; text-align: right; }
 .innova-telemetry--right::before { right: 142px; transform: scaleX(-1); }
 /* Fondo del diseno: puntos con mascara radial, un resplandor tras el nucleo y dos hilos laterales con destellos. */
-.innova .canvas-grid { opacity: .6; -webkit-mask-image: radial-gradient(ellipse at 50% 38%, #000 6%, transparent 78%); mask-image: radial-gradient(ellipse at 50% 38%, #000 6%, transparent 78%); }
-.innova-glow { position: absolute; z-index: 0; top: 70px; left: 50%; width: min(780px, 80vw); height: 560px; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(ellipse, rgba(var(--teal-rgb), .08), transparent 65%); filter: blur(15px); pointer-events: none; }
+.innova .canvas-grid { opacity: .6; -webkit-mask-image: radial-gradient(ellipse at 50% 52%, #000 6%, transparent 78%); mask-image: radial-gradient(ellipse at 50% 52%, #000 6%, transparent 78%); }
+.innova-glow { position: absolute; z-index: 0; top: 52%; left: 50%; width: min(780px, 80vw); height: 560px; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(ellipse, rgba(var(--teal-rgb), .08), transparent 65%); filter: blur(15px); pointer-events: none; }
 .innova-stream { position: absolute; z-index: 0; top: 110px; bottom: 140px; width: 1px; background: linear-gradient(transparent, rgba(var(--teal-2-rgb), .22) 35%, rgba(var(--teal-2-rgb), .08), transparent); pointer-events: none; }
 .innova-stream--left { left: 34px; }
 .innova-stream--right { right: 34px; }
@@ -438,11 +440,9 @@ button { border: 0; background: none; cursor: pointer; }
 .innova-status[data-state="thinking"] { color: var(--violet); }
 .innova-status[data-state="alert"] { color: var(--amber); }
 /* El contenedor se desplaza; sus hijos no se comprimen (una respuesta con tabla quedaba en una línea). */
-.innova-scroll > * { flex-shrink: 0; }
-.innova.has-exchange .innova-orb-btn { height: min(24vh, 240px); }
 /* Innova: voz (el núcleo es también el botón de hablar). */
 /* El botón fija el tamaño y el canvas lo llena: si el botón midiera "lo que mida su contenido", una vista montada oculta dejaba el canvas en 0 px para siempre. */
-.innova-orb-btn { flex: none; display: block; width: min(100%, 400px); height: min(38vh, 400px); padding: 0; border-radius: 50%; cursor: pointer; background: transparent; }
+.innova-orb-btn { flex: none; display: block; width: min(86vw, 520px); height: min(56vh, 520px); padding: 0; border-radius: 50%; cursor: pointer; background: transparent; }
 .innova-orb-btn:focus-visible { outline: 2px solid var(--teal); outline-offset: 4px; }
 .innova-error { margin: 4px 0 0; max-width: 560px; color: var(--amber); font-size: calc(12.5px * var(--afs, 1)); text-align: center; }
 .innova-question.live { color: var(--text); }
@@ -457,7 +457,7 @@ button { border: 0; background: none; cursor: pointer; }
 .innova-settings summary { list-style: none; padding: 6px 10px; border-radius: 999px; color: var(--muted); font-size: calc(12px * var(--afs, 1)); cursor: pointer; }
 .innova-settings summary::-webkit-details-marker { display: none; }
 .innova-settings summary:hover, .innova-settings[open] summary { color: var(--teal); }
-.innova-settings-pop { position: absolute; z-index: 5; right: 0; bottom: 48px; width: min(330px, 84vw); display: grid; gap: 12px; padding: 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--popover-bg); box-shadow: 0 16px 44px rgba(var(--shade-rgb), .4); font-size: calc(12.5px * var(--afs, 1)); }
+.innova-settings-pop { position: absolute; z-index: 5; right: 0; top: 38px; width: min(330px, 84vw); display: grid; gap: 12px; padding: 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--popover-bg); box-shadow: 0 16px 44px rgba(var(--shade-rgb), .4); font-size: calc(12.5px * var(--afs, 1)); }
 .innova-settings-pop label { display: grid; gap: 4px; color: var(--muted); }
 .innova-settings-pop label.check { display: flex; align-items: flex-start; gap: 8px; color: var(--text); }
 .innova-settings-pop select { width: 100%; padding: 7px 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--field-bg); color: var(--text); font: inherit; }

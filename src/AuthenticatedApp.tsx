@@ -178,11 +178,9 @@ export function AuthenticatedApp() {
           <InnovaView
             active={view === "innova"}
             idToken={idToken!}
-            businessName={onboarding.me?.businessName ?? ""}
             onCreateWidget={addWidget}
             onReportSaved={() => void reports.refresh()}
             matters={advisor.matters}
-            onMark={(id, status) => { void advisor.mark(id, status); }}
             onOpenClassic={() => setView("ai")}
           />
         )}
