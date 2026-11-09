@@ -47,13 +47,14 @@ export function briefingSpoken(greeting: { headline: string; sub: string }, matt
   ].filter(Boolean).join(" ");
 }
 
-/** Saludo de la portada: determinista, con el conteo de avisos que la persona todavía no vio. */
-export function greetingFor(now: Date, matters: readonly ApiMatter[]): { headline: string; sub: string } {
+/** Saludo de la portada: determinista, con el conteo de avisos y el nombre del negocio si existe. */
+export function greetingFor(now: Date, matters: readonly ApiMatter[], businessName?: string): { headline: string; sub: string } {
   const unseen = countUnseen(matters);
+  const where = businessName?.trim() ? businessName.trim() : "tu negocio";
   const sub = unseen === 0
-    ? "Por ahora no hay nada que requiera tu atención. Pregúntame lo que necesites sobre tus datos."
+    ? `Por ahora no hay nada que requiera tu atención. Preguntame lo que necesites sobre ${where}.`
     : unseen === 1
-      ? "Hay 1 cosa que revisar. Pregúntame lo que necesites sobre tus datos."
-      : `Hay ${unseen} cosas que revisar. Pregúntame lo que necesites sobre tus datos.`;
+      ? `Hay 1 cosa que revisar. Preguntame lo que necesites sobre ${where}.`
+      : `Hay ${unseen} cosas que revisar. Preguntame lo que necesites sobre ${where}.`;
   return { headline: `${greetingWord(now.getHours())}. Soy ${ASSISTANT_NAME}.`, sub };
 }

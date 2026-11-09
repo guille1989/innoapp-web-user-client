@@ -34,6 +34,8 @@ test("el saludo cuenta solo los avisos nuevos, con singular y plural", () => {
   assert.match(greetingFor(morning, [matter({})]).sub, /Hay 1 cosa que revisar/);
   assert.match(greetingFor(morning, [matter({}), matter({}), matter({ status: "seen" })]).sub, /Hay 2 cosas que revisar/);
   assert.equal(greetingFor(morning, []).headline, "Buenos días. Soy Innova.");
+  assert.match(greetingFor(morning, [], "Empanadas El Sol").sub, /Empanadas El Sol/);
+  assert.match(greetingFor(morning, []).sub, /tu negocio/);
 });
 
 test("responder manda sobre escuchar, y escuchar sobre la alerta", () => {

@@ -211,8 +211,13 @@ export const api = {
     request<{ reports: ApiReportListItem[]; nextCursor?: string }>(token, `/reports${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`, { signal }),
   report: (token: string, reportId: string, signal?: AbortSignal) => request<ApiStoredReport>(token, `/reports/${encodeURIComponent(reportId)}`, { signal }),
   deleteReport: (token: string, reportId: string, signal?: AbortSignal) => request<void>(token, `/reports/${encodeURIComponent(reportId)}`, { method: "DELETE", signal }),
-  assistantAsk: (token: string, question: string, history: ApiAssistantHistoryTurn[] = [], signal?: AbortSignal) =>
-    request<ApiAssistantAnswer>(token, "/assistant/ask", { method: "POST", body: JSON.stringify({ question, history, timeZone: browserTimeZone() }), signal }),
+  /** `matterId` (opcional): aviso de Innova al tocar Preguntar — el backend llama explain_matter. */
+  assistantAsk: (token: string, question: string, history: ApiAssistantHistoryTurn[] = [], signal?: AbortSignal, matterId?: string) =>
+    request<ApiAssistantAnswer>(token, "/assistant/ask", {
+      method: "POST",
+      body: JSON.stringify({ question, history, timeZone: browserTimeZone(), ...(matterId ? { matterId } : {}) }),
+      signal,
+    }),
   /** Historial de conversaciones de la persona logueada (solo metadata), de la más nueva a la más vieja. */
   conversations: (token: string, cursor?: string, signal?: AbortSignal) =>
     request<{ conversations: ApiConversationSummary[]; nextCursor?: string }>(token, `/assistant/conversations${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`, { signal }),

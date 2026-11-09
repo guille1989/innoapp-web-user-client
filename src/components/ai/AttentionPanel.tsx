@@ -6,8 +6,8 @@ const MAX_VISIBLE = 3;
 
 interface AttentionPanelProps {
   matters: ApiMatter[];
-  /** Manda la pregunta al chat. */
-  onAsk: (question: string) => void;
+  /** Manda la pregunta al chat; `matterId` permite explain_matter en el backend. */
+  onAsk: (question: string, matterId?: string) => void;
   onMark: (id: string, status: "seen" | "dismissed") => void;
   disabled?: boolean;
 }
@@ -26,7 +26,7 @@ export function AttentionPanel({ matters, onAsk, onMark, disabled }: AttentionPa
           <h3 className="attention-title">{matter.title}</h3>
           <p className="attention-detail">{matter.detail}</p>
           <div className="attention-actions">
-            <button type="button" className="primary" disabled={disabled} onClick={() => onAsk(questionAbout(matter))}>Preguntar</button>
+            <button type="button" className="primary" disabled={disabled} onClick={() => onAsk(questionAbout(matter), matter.id)}>Preguntar</button>
             {matter.status === "new" && <button type="button" onClick={() => onMark(matter.id, "seen")}>Entendido</button>}
             <button type="button" onClick={() => onMark(matter.id, "dismissed")}>Descartar</button>
           </div>
