@@ -39,7 +39,15 @@ function draftToWidget(draft: ApiWidgetDraft): Omit<Widget, "id"> {
   };
 }
 
-const greeting = (): ChatMessage => ({ id: msgSeq++, role: "ai", text: "Hola, soy tu asistente de datos. Puedo analizar las lecturas de tus agentes y crear widgets por ti.", transient: true });
+function greeting(businessName?: string): ChatMessage {
+  const where = businessName?.trim() ? businessName.trim() : "tu negocio";
+  return {
+    id: msgSeq++,
+    role: "ai",
+    text: `Hola, soy **Innova**, tu especialista en ${where}. Puedo ayudarte con ventas, sucursales, avisos y widgets.`,
+    transient: true,
+  };
+}
 
 interface UseAssistantChatOptions {
   idToken: string;
@@ -50,12 +58,14 @@ interface UseAssistantChatOptions {
   persist?: boolean;
   /** El backend guardó la conversación: el historial actualiza su fila (título nuevo, fecha de actividad). */
   onConversationSaved?: (summary: ApiConversationSummary) => void;
+  /** Nombre del negocio para el saludo (GET /me). */
+  businessName?: string;
 }
 
-/** Estado y envío de la conversación con el asistente de datos; lo comparten el panel flotante y la vista IA. */
-export function useAssistantChat({ idToken, onCreateWidget, onReportSaved, persist = false, onConversationSaved }: UseAssistantChatOptions) {
+/** Estado y envío de la conversación con Innova; lo comparten el panel flotante y la vista IA. */
+export function useAssistantChat({ idToken, onCreateWidget, onReportSaved, persist = false, onConversationSaved, businessName }: UseAssistantChatOptions) {
   const scope = useRequestScope(idToken);
-  const [messages, setMessages] = useState<ChatMessage[]>(() => [greeting()]);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => [greeting(businessName)]);
   const [typing, setTyping] = useState(false);
   // Solo los intercambios que de verdad pasaron por el asistente (Bedrock) —
   // las respuestas locales (regex, crear widgets) no cuentan como
@@ -95,7 +105,7 @@ export function useAssistantChat({ idToken, onCreateWidget, onReportSaved, persi
     conversationId.current = conversation.conversationId;
     setActiveId(conversation.conversationId);
     lastSaved.current = conversationSignature(conversation.conversationId, conversation.messages, conversation.history);
-    setMessages([greeting(), ...conversation.messages.map((m): ChatMessage => ({ id: msgSeq++, role: m.role, text: m.text, ...(m.reportId ? { reportId: m.reportId } : {}) }))]);
+    setMessages([greeting(businessName), ...conversation.messages.map((m): ChatMessage => ({ id: msgSeq++, role: m.role, text: m.text, ...(m.reportId ? { reportId: m.reportId } : {}) }))]);
     setHistory(conversation.history);
     for (const message of conversation.messages) {
       if (!message.reportId) continue;
@@ -166,12 +176,13 @@ export function useAssistantChat({ idToken, onCreateWidget, onReportSaved, persi
     setMessages((prev) => [...prev, { id: msgSeq++, role: "ai", ...message }]);
   }
 
-  /** `onAccepted` corre cuando la pregunta se acepta (antes de la respuesta), para que el llamador limpie su input. */
-  async function send(question: string, onAccepted?: () => void) {
+  /** `onAccepted` corre cuando la pregunta se acepta (antes de la respuesta), para que el llamador limpie su input. `matterId` enlaza un aviso de Innova. */
+  async function send(question: string, onAccepted?: () => void, matterId?: string) {
     const value = question.trim();
     if (!value || typing || !ready) return;
     const previousQuestion = [...history].reverse().find((t) => t.role === "user")?.text;
-    const local = respondLocally(value, previousQuestion);
+    // Preguntas sobre un aviso concreto van siempre al backend (explain_matter); no al atajo local.
+    const local = matterId ? null : respondLocally(value, previousQuestion);
     const isLocal = local !== null;
     if (!isLocal && blocked) return;
     setMessages((prev) => [...prev, { id: msgSeq++, role: "user", text: value }]);
@@ -196,7 +207,7 @@ export function useAssistantChat({ idToken, onCreateWidget, onReportSaved, persi
     setNow(Date.now());
     setUsage((u) => (u.minute === currentMinute() ? { minute: u.minute, count: u.count + 1 } : { minute: currentMinute(), count: 1 }));
     try {
-      const { answer, report, reportId, widget } = await api.assistantAsk(idToken, value, history, task.signal);
+      const { answer, report, reportId, widget } = await api.assistantAsk(idToken, value, history, task.signal, matterId);
       if (!task.isCurrent()) return;
       if (reportId) onReportSaved();
       // El servidor ya validó el widget con una consulta real; se crea por la ruta normal para que el tablero se refresque.
@@ -244,7 +255,7 @@ export function useAssistantChat({ idToken, onCreateWidget, onReportSaved, persi
     writeActiveConversation(null);
     setReady(true);
     setTyping(false);
-    setMessages([greeting()]);
+    setMessages([greeting(businessName)]);
     setHistory([]);
   }
 

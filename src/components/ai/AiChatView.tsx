@@ -22,11 +22,11 @@ interface AiChatViewProps {
 // En pantallas angostas el historial es un panel que se superpone al chat (y se cierra al elegir algo).
 const isNarrow = () => typeof window !== "undefined" && window.matchMedia("(max-width: 760px)").matches;
 
-/** Vista IA: conversación a pantalla completa con el asistente de datos, con el historial de conversaciones al lado. */
+/** Vista IA: conversación a pantalla completa con Innova, con el historial de conversaciones al lado. */
 export function AiChatView({ active, onCreateWidget, idToken, businessName, onReportSaved, attention }: AiChatViewProps) {
   const list = useConversationList(idToken);
   const { messages, typing, ready, blocked, usageNotice, activeId, send, startNewConversation, openConversation } = useAssistantChat({
-    idToken, onCreateWidget, onReportSaved, persist: true, onConversationSaved: list.upsert,
+    idToken, onCreateWidget, onReportSaved, persist: true, onConversationSaved: list.upsert, businessName,
   });
   const [input, setInput] = useState("");
   const [fontLevel] = useFontLevel();
@@ -59,8 +59,8 @@ export function AiChatView({ active, onCreateWidget, idToken, businessName, onRe
     el.style.overflowY = el.scrollHeight > el.clientHeight + 1 ? "auto" : "hidden";
   }, [input, active, fontLevel]);
 
-  function ask(question: string) {
-    void send(question, () => setInput(""));
+  function ask(question: string, matterId?: string) {
+    void send(question, () => setInput(""), matterId);
   }
 
   function newConversation() {
@@ -125,7 +125,7 @@ export function AiChatView({ active, onCreateWidget, idToken, businessName, onRe
         <div className="ai-chat-composer">
           {usageNotice && <div className="ai-chat-usage" role="status">{usageNotice}</div>}
           <div className="ai-chat-input glass">
-            <textarea ref={textareaRef} rows={1} placeholder={blocked ? "Esperá un momento para volver a preguntar…" : started ? "Pregunta a tu agente sobre cualquier dato…" : SUGGESTED[hint].q} aria-label="Mensaje para la IA" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); ask(input); } }} />
+            <textarea ref={textareaRef} rows={1} placeholder={blocked ? "Esperá un momento para volver a preguntar…" : started ? "Preguntale a Innova sobre tu negocio…" : SUGGESTED[hint].q} aria-label="Mensaje para Innova" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); ask(input); } }} />
             <div className="ai-chat-tools">
               <button className="ai-send" onClick={() => ask(input)} aria-label="Enviar" disabled={!input.trim() || typing || !ready}><IconSend /></button>
             </div>

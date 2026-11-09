@@ -20,7 +20,7 @@ interface AiSheetProps {
 }
 
 export function AiSheet({ open, onOpen, onClose, onCreateWidget, idToken, businessName, onReportSaved, hideDock }: AiSheetProps) {
-  const { messages, typing, blocked, usageNotice, send } = useAssistantChat({ idToken, onCreateWidget, onReportSaved });
+  const { messages, typing, blocked, usageNotice, send } = useAssistantChat({ idToken, onCreateWidget, onReportSaved, businessName });
   const [fontLevel, setFontLevel] = useFontLevel();
   const [input, setInput] = useState("");
   const [dockInput, setDockInput] = useState("");
@@ -47,16 +47,16 @@ export function AiSheet({ open, onOpen, onClose, onCreateWidget, idToken, busine
       {!open && !hideDock && (
         <div className="ai-dock glass">
           <div className="ai-dock-orb"><IconAi /></div>
-          <input value={dockInput} onChange={(e) => setDockInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") submitDock(); }} placeholder="Pregunta a tu agente sobre cualquier dato…" aria-label="Pregunta al asistente" />
-          <button onClick={submitDock} aria-label="Enviar al asistente"><IconSend /></button>
+          <input value={dockInput} onChange={(e) => setDockInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") submitDock(); }} placeholder="Preguntale a Innova sobre tu negocio…" aria-label="Pregunta a Innova" />
+          <button onClick={submitDock} aria-label="Enviar a Innova"><IconSend /></button>
         </div>
       )}
       <section className={`sheet ai-sheet${open ? " open" : ""}`} aria-hidden={!open}>
         <div className="sheet-handle" />
         <header className="ai-head">
-          <div className="ai-head-title"><div className="ai-avatar"><IconAi /></div><div><div className="ai-title-text">Asistente de datos</div><div className="ai-subtitle"><span className="pulse-dot" /> Datos sincronizados en tiempo real</div></div></div>
-          <TextSizeControl className="inline" level={fontLevel} onChange={setFontLevel} label="Tamaño del texto del asistente" />
-          <button className="ai-close" onClick={onClose} aria-label="Cerrar asistente"><IconClose /></button>
+          <div className="ai-head-title"><div className="ai-avatar"><IconAi /></div><div><div className="ai-title-text">Innova</div><div className="ai-subtitle"><span className="pulse-dot" /> Especialista de tu negocio</div></div></div>
+          <TextSizeControl className="inline" level={fontLevel} onChange={setFontLevel} label="Tamaño del texto de Innova" />
+          <button className="ai-close" onClick={onClose} aria-label="Cerrar Innova"><IconClose /></button>
         </header>
         <div className="ai-body" ref={bodyRef}>
           {messages.map((message) => <div className={`msg ${message.role}`} key={message.id}><div className="msg-avatar">{message.role === "ai" ? "IA" : "Tú"}</div><div className="msg-bubble"><ChatMessageContent message={message} businessName={businessName} /></div></div>)}
@@ -65,7 +65,7 @@ export function AiSheet({ open, onOpen, onClose, onCreateWidget, idToken, busine
         <div className="suggested">{SUGGESTED.map((item) => <button className="chip" key={item.q} onClick={() => ask(item.q)}>{item.label}</button>)}</div>
         <div className="ai-usage" role="status" style={{ fontSize: "calc(12px * var(--afs, 1))", padding: "0 16px 6px", opacity: 0.75 }}>{usageNotice}</div>
         <div className="ai-input-wrap">
-          <textarea className="ai-input" rows={1} placeholder={blocked ? "Esperá un momento para volver a preguntar…" : "Pregunta o pide un KPI…"} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); ask(input); } }} />
+          <textarea className="ai-input" rows={1} placeholder={blocked ? "Esperá un momento para volver a preguntar…" : "Preguntale a Innova sobre tu negocio…"} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); ask(input); } }} />
           <button className="ai-send" onClick={() => ask(input)} aria-label="Enviar"><IconSend /></button>
         </div>
       </section>

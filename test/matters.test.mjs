@@ -37,8 +37,9 @@ test("descartar quita el aviso y visto lo deja en la lista atenuado", () => {
   assert.equal(list[0].status, "new", "no muta la lista original");
 });
 
-test("la pregunta lleva el aviso completo y nunca supera el tope del backend", () => {
+test("la pregunta nombra el aviso y nunca supera el tope del backend (el detalle va por matterId)", () => {
   const question = questionAbout({ title: "TPV Sol lleva 3 horas sin conectarse", detail: "Revisa el equipo." });
-  assert.match(question, /TPV Sol lleva 3 horas sin conectarse\. Revisa el equipo\./);
-  assert.ok(questionAbout({ title: "x".repeat(900), detail: "y" }).length <= 500);
+  assert.match(question, /TPV Sol lleva 3 horas sin conectarse/);
+  assert.doesNotMatch(question, /Revisa el equipo/);
+  assert.ok(questionAbout({ title: "x".repeat(900) }).length <= 500);
 });

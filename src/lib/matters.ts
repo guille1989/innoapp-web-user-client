@@ -27,7 +27,11 @@ export function applyMark(matters: readonly ApiMatter[], id: string, status: "se
   return matters.map((matter) => (matter.id === id ? { ...matter, status: "seen" } : matter));
 }
 
-/** Pregunta que se le manda al asistente al tocar "Preguntar" en un aviso: lleva el aviso completo para que tenga contexto. */
-export function questionAbout(matter: Pick<ApiMatter, "title" | "detail">): string {
-  return `Explícame este aviso y dime qué debería revisar primero: ${matter.title}. ${matter.detail}`.trim().slice(0, MAX_QUESTION_LENGTH);
+/**
+ * Pregunta corta al tocar "Preguntar" en un aviso. El detalle completo ya no
+ * viaja pegado en el texto: el cliente manda `matterId` y el backend usa
+ * explain_matter (evita el tope de 500 chars y alucinaciones sobre el aviso).
+ */
+export function questionAbout(matter: Pick<ApiMatter, "title">): string {
+  return `Explícame este aviso y decime qué debería revisar primero: ${matter.title}`.trim().slice(0, MAX_QUESTION_LENGTH);
 }
