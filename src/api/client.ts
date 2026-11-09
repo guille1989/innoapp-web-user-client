@@ -140,7 +140,8 @@ export class ApiError extends Error {
 
 async function readErrorBody(response: Response): Promise<never> {
   const body = (await response.json().catch(() => ({}))) as { error?: string };
-  throw new ApiError(body.error ?? `La API respondió HTTP ${response.status}`, response.status);
+  const timedOut = response.status === 504 ? "La consulta tardó demasiado en responder. Probá de nuevo en unos segundos." : undefined;
+  throw new ApiError(body.error ?? timedOut ?? `La API respondió HTTP ${response.status}`, response.status);
 }
 
 async function request<T>(idToken: string, path: string, init?: RequestInit): Promise<T> {
