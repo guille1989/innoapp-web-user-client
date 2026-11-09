@@ -9,6 +9,7 @@ import { SPEECH_LANGS, speakableText } from "../../lib/speech";
 import { useAssistantChat } from "../ai/useAssistantChat";
 import type { Widget } from "../../types";
 import { InnovaOrb } from "./InnovaOrb";
+import { InnovaSpeech } from "./InnovaSpeech";
 
 /** Líneas de datos del diseño: dos hilos verticales con destellos que caen. Solo decoración. */
 const DataStream = ({ side }: { side: "left" | "right" }) => (
@@ -28,8 +29,9 @@ interface InnovaViewProps {
 /**
  * Innova (beta): solo voz. El núcleo animado ocupa el centro de la pantalla y muestra lo que está
  * haciendo (reposo, escuchando, pensando, hablando, alerta). Se le toca para hablarle (Chrome y Edge)
- * y contesta en voz alta con el mismo asistente de datos del chat clásico; no hay texto de respuesta
- * ni campo para escribir. Se ve solo en los negocios con el interruptor encendido. La conversación no
+ * y contesta en voz alta con el mismo asistente de datos del chat clásico. Mientras habla, el núcleo
+ * se adelanta y arriba a la derecha aparece lo que dice, como el chat de un videojuego; no hay campo
+ * para escribir. Se ve solo en los negocios con el interruptor encendido. La conversación no
  * se guarda: para leerla o escribirle está el chat clásico, que sigue intacto.
  */
 export function InnovaView({ active, idToken, onCreateWidget, onReportSaved, matters, onOpenClassic }: InnovaViewProps) {
@@ -106,7 +108,7 @@ export function InnovaView({ active, idToken, onCreateWidget, onReportSaved, mat
   const orbLabel = listen.listening ? "Dejar de escuchar" : speech.speaking ? "Callar a Innova" : "Hablar con Innova";
 
   return (
-    <section className={`innova view${active ? " active" : ""}`} aria-label={ASSISTANT_NAME}>
+    <section className={`innova view${active ? " active" : ""}${speech.speaking ? " is-speaking" : ""}`} aria-label={ASSISTANT_NAME}>
       <div className="canvas-grid" />
       <div className="canvas-vignette" />
       <div className="innova-glow" aria-hidden="true" />
@@ -138,6 +140,8 @@ export function InnovaView({ active, idToken, onCreateWidget, onReportSaved, mat
           <button type="button" className="innova-link" onClick={onOpenClassic}>Ir al chat clásico <span aria-hidden="true">↗</span></button>
         </div>
       </div>
+
+      <InnovaSpeech said={speech.said} speaking={speech.speaking} rate={voice.rate} />
 
       <div className="innova-center">
         <div className="innova-stage">

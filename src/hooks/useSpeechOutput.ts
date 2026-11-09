@@ -13,6 +13,8 @@ export function useSpeechOutput(levelRef: LevelRef, settings: VoiceSettings) {
   const synth = typeof window !== "undefined" ? window.speechSynthesis : undefined;
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [speaking, setSpeaking] = useState(false);
+  /** Las frases que Innova ya empezó a decir en esta intervención (para mostrarlas escritas a la par). */
+  const [said, setSaid] = useState<string[]>([]);
   const turn = useRef(0);
   const current = useRef(settings);
   current.current = settings;
@@ -30,6 +32,7 @@ export function useSpeechOutput(levelRef: LevelRef, settings: VoiceSettings) {
     synth?.cancel();
     levelRef.current = 0;
     setSpeaking(false);
+    setSaid([]);
   }, [synth, levelRef]);
 
   /** Resuelve `true` si terminó de hablar y `false` si la interrumpieron o no pudo hablar. */
@@ -39,6 +42,7 @@ export function useSpeechOutput(levelRef: LevelRef, settings: VoiceSettings) {
     const mine = ++turn.current;
     const parts = splitSentences(text);
     setSpeaking(true);
+    setSaid([]);
     return new Promise<boolean>((resolve) => {
       let index = 0;
       const finish = (finished: boolean) => {
@@ -49,6 +53,7 @@ export function useSpeechOutput(levelRef: LevelRef, settings: VoiceSettings) {
         if (turn.current !== mine) return resolve(false);
         if (index >= parts.length) return finish(true);
         const part = parts[index++];
+        setSaid(parts.slice(0, index));
         const { lang, voice: preferred, rate } = current.current;
         const utterance = new SpeechSynthesisUtterance(part);
         const voice = pickVoice(synth.getVoices(), lang, preferred);
@@ -79,5 +84,5 @@ export function useSpeechOutput(levelRef: LevelRef, settings: VoiceSettings) {
   // Al salir de la vista, Innova se calla.
   useEffect(() => cancel, [cancel]);
 
-  return { supported: Boolean(synth), voices, speaking, speak, cancel };
+  return { supported: Boolean(synth), voices, speaking, said, speak, cancel };
 }
