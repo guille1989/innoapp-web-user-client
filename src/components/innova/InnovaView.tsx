@@ -150,7 +150,7 @@ export function InnovaView({ active, idToken, onCreateWidget, onReportSaved, mat
           <div className="innova-telemetry innova-telemetry--left" aria-hidden="true">
             <small>ENTRADA</small>
             <strong>{listen.supported ? "VOZ" : "NO DISPONIBLE"}</strong>
-            <span>{listen.supported ? voice.lang : "USA CHROME O EDGE"}</span>
+            <span>{listen.supported ? voice.lang : "USA CHROME, EDGE O SAFARI"}</span>
           </div>
           <div className="innova-telemetry innova-telemetry--right" aria-hidden="true">
             <small>AVISOS</small>

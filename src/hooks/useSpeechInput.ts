@@ -25,7 +25,22 @@ function recognitionCtor(): RecognitionCtor | undefined {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition;
 }
 
-const ERRORS: Record<string, string> = {
+/** iPhone/iPad (incluido el iPad que se hace pasar por Mac). */
+const IS_IOS = typeof navigator !== "undefined"
+  && (/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
+
+/** Chrome, Firefox o Edge en iPhone: son Safari por dentro y iOS les suele negar el reconocimiento de voz. */
+const IS_IOS_THIRD_PARTY = IS_IOS && /CriOS|FxiOS|EdgiOS|OPiOS/.test(navigator.userAgent);
+
+// En iOS el permiso del micrófono de la web no basta: el reconocimiento de voz lo hace Siri, y se
+// bloquea si el dictado está apagado o si la voz se pidió sin que el usuario tocara nada.
+const ERRORS: Record<string, string> = IS_IOS ? {
+  "not-allowed": "iOS bloqueó el micrófono. Toca el núcleo de nuevo; si sigue, revisa Ajustes › Safari › Micrófono (Permitir) y Ajustes › Privacidad y seguridad › Reconocimiento de voz.",
+  "service-not-allowed": "iOS bloqueó el reconocimiento de voz. Activa el dictado en Ajustes › General › Teclado › Activar dictado (y Siri en Ajustes › Siri).",
+  "no-speech": "No te escuché. Toca el núcleo e inténtalo de nuevo.",
+  "audio-capture": "No encuentro ningún micrófono.",
+  network: "El reconocimiento de voz necesita conexión a internet.",
+} : {
   "not-allowed": "Necesito permiso para usar el micrófono. Actívalo en el candado de la barra de direcciones.",
   "service-not-allowed": "El navegador bloqueó el reconocimiento de voz.",
   "no-speech": "No te escuché. Toca el micrófono e inténtalo de nuevo.",
@@ -108,9 +123,18 @@ export function useSpeechInput({ lang, levelRef, onFinal }: SpeechInputOptions) 
         if (result.isFinal) finalText += result[0].transcript; else partial += result[0].transcript;
       }
       setInterim((finalText + partial).trim());
+      if (IS_IOS) { // sin medidor de micrófono: pulso mientras llegan palabras
+        levelRef.current = 0.7;
+        window.setTimeout(() => { if (recognition.current === rec) levelRef.current = 0.25; }, 160);
+      }
     };
     rec.onerror = (event) => {
-      if (event.error !== "aborted") setError(ERRORS[event.error] ?? `No pude escucharte (${event.error}).`);
+      if (event.error === "aborted") return;
+      if (IS_IOS_THIRD_PARTY && (event.error === "service-not-allowed" || event.error === "not-allowed")) {
+        setError("Este navegador no puede usar la voz en iPhone. Abre app.theinnoapp.com en Safari y vuelve a tocar el núcleo.");
+        return;
+      }
+      setError(ERRORS[event.error] ?? `No pude escucharte (${event.error}).`);
     };
     rec.onend = () => {
       recognition.current = null;
@@ -124,7 +148,9 @@ export function useSpeechInput({ lang, levelRef, onFinal }: SpeechInputOptions) 
     try {
       rec.start();
       setListening(true);
-      void startMeter();
+      // En iOS el reconocimiento y getUserMedia se disputan el micrófono: abrir los dos a la vez
+      // hace que Safari bloquee uno (o vuelva a pedir permiso). Allí el núcleo late con el texto oído.
+      if (!IS_IOS) void startMeter();
     } catch {
       recognition.current = null;
       setError("No pude empezar a escuchar. Inténtalo de nuevo.");
