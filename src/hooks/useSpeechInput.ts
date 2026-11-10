@@ -155,7 +155,7 @@ export function useSpeechInput({ lang, levelRef, onFinal }: SpeechInputOptions) 
       recognition.current = null;
       setError("No pude empezar a escuchar. Inténtalo de nuevo.");
     }
-  }, [Ctor, lang, releaseMeter, startMeter]);
+  }, [Ctor, lang, levelRef, releaseMeter, startMeter]);
 
   /** Termina de escuchar y entrega lo que alcanzó a oír. */
   const stop = useCallback(() => { recognition.current?.stop(); }, []);

@@ -101,6 +101,7 @@ export function InnovaView({ active, idToken, onCreateWidget, onReportSaved, mat
 
   /** El núcleo es también el botón de hablar: lo tocas para callar a Innova o para decirle algo. */
   function onOrbClick() {
+    speech.unlock(); // dentro del toque: así iOS deja hablar a Innova cuando llegue la respuesta
     if (speech.speaking || typing) { speech.cancel(); return; }
     if (!ready || blocked) return;
     toggleListening();

@@ -27,18 +27,34 @@ export function useSpeechOutput(levelRef: LevelRef, settings: VoiceSettings) {
     return () => synth.removeEventListener?.("voiceschanged", load);
   }, [synth]);
 
+  // Safari ignora en silencio un `speak()` que llega justo después de un `cancel()`: solo se cancela si hay algo.
+  const cancelPending = useCallback(() => {
+    if (synth && (synth.speaking || synth.pending)) synth.cancel();
+  }, [synth]);
+
+  // iOS solo deja hablar a la página si la primera locución nace de un toque. La respuesta de Innova llega
+  // después de una espera (ya sin toque), así que se "desbloquea" la voz con una locución muda al tocar.
+  const unlocked = useRef(false);
+  const unlock = useCallback(() => {
+    if (!synth || unlocked.current) return;
+    unlocked.current = true;
+    const silent = new SpeechSynthesisUtterance(" ");
+    silent.volume = 0;
+    synth.speak(silent);
+  }, [synth]);
+
   const cancel = useCallback(() => {
     turn.current++;
-    synth?.cancel();
+    cancelPending();
     levelRef.current = 0;
     setSpeaking(false);
     setSaid([]);
-  }, [synth, levelRef]);
+  }, [cancelPending, levelRef]);
 
   /** Resuelve `true` si terminó de hablar y `false` si la interrumpieron o no pudo hablar. */
   const speak = useCallback((text: string): Promise<boolean> => {
     if (!synth || !text.trim()) return Promise.resolve(false);
-    synth.cancel();
+    cancelPending();
     const mine = ++turn.current;
     const parts = splitSentences(text);
     setSpeaking(true);
@@ -79,10 +95,10 @@ export function useSpeechOutput(levelRef: LevelRef, settings: VoiceSettings) {
       };
       next();
     });
-  }, [synth, levelRef]);
+  }, [synth, levelRef, cancelPending]);
 
   // Al salir de la vista, Innova se calla.
   useEffect(() => cancel, [cancel]);
 
-  return { supported: Boolean(synth), voices, speaking, said, speak, cancel };
+  return { supported: Boolean(synth), voices, speaking, said, speak, cancel, unlock };
 }
