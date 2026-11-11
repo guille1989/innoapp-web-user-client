@@ -19,8 +19,15 @@ const RESTORE_TIMEOUT_MS = 4000;
 
 export type { ChatMessage };
 
+// Los cinco primeros son los prompts guía: el backend los resuelve con la herramienta determinista
+// `analyze_business` (ticket-parsing-cloud/src/assistant/analyticsTools.ts), que calcula las cifras;
+// el modelo solo las redacta.
 export const SUGGESTED = [
-  { q: "¿Cuál sucursal vendió más hoy?", label: "Sucursal con más ventas" },
+  { q: "¿Cómo va mi negocio hoy?", label: "Cómo va hoy" },
+  { q: "¿Por qué vendí menos esta semana?", label: "Por qué vendí menos" },
+  { q: "¿Cuáles son mis productos estrella?", label: "Productos estrella" },
+  { q: "¿Qué local está funcionando mejor?", label: "Mejor local" },
+  { q: "¿Qué puedo hacer para vender más mañana?", label: "Vender más mañana" },
   { q: "Hazme una gráfica de ventas por sucursal", label: "Gráfica por sucursal" },
   { q: "Crea un kpi con el conteo de tickets", label: "KPI de tickets" },
 ];
