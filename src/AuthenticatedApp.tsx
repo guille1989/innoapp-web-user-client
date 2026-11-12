@@ -174,7 +174,7 @@ export function AuthenticatedApp() {
             {cloud.error && <button onClick={() => void cloud.refresh()}>Reintentar</button>}
           </div>
         )}
-        <AiChatView active={view === "ai"} onCreateWidget={addWidget} idToken={idToken!} businessName={onboarding.me?.businessName ?? ""} profile={onboarding.me?.profile} onReportSaved={() => void reports.refresh()} attention={{ matters: advisor.matters, onMark: (id, status) => { void advisor.mark(id, status); } }} />
+        <AiChatView active={view === "ai"} onCreateWidget={addWidget} idToken={idToken!} businessName={onboarding.me?.businessName ?? ""} profile={onboarding.me?.profile} suggestedPrompts={onboarding.me?.suggestedPrompts} onReportSaved={() => void reports.refresh()} attention={{ matters: advisor.matters, onMark: (id, status) => { void advisor.mark(id, status); } }} />
         {advisorView && (
           <InnovaView
             active={view === "innova"}
@@ -192,7 +192,7 @@ export function AuthenticatedApp() {
       </main>
       <footer className="app-footer">Powered by <strong>InnoApp</strong></footer>
       <Overlay open={activeSheet !== null} onClick={() => setActiveSheet(null)} />
-      <AiSheet hideDock open={activeSheet === "ai"} onOpen={() => setActiveSheet("ai")} onClose={() => setActiveSheet(null)} onCreateWidget={addWidget} idToken={idToken!} businessName={onboarding.me?.businessName ?? ""} profile={onboarding.me?.profile} onReportSaved={() => void reports.refresh()} />
+      <AiSheet hideDock open={activeSheet === "ai"} onOpen={() => setActiveSheet("ai")} onClose={() => setActiveSheet(null)} onCreateWidget={addWidget} idToken={idToken!} businessName={onboarding.me?.businessName ?? ""} profile={onboarding.me?.profile} suggestedPrompts={onboarding.me?.suggestedPrompts} onReportSaved={() => void reports.refresh()} />
       <WidgetBuilderSheet open={activeSheet === "builder"} onClose={() => setActiveSheet(null)} onCreate={addWidget} agents={cloud.agents} />
       <BusinessProfileSheet
         open={activeSheet === "profile"}

@@ -19,9 +19,12 @@ interface AiSheetProps {
   onReportSaved: () => void;
   /** Oculta el campo flotante: la entrada al asistente es la vista IA. */
   hideDock?: boolean;
+  /** Prompts propios de esta persona (GET /me); sin ellos, los predeterminados. */
+  suggestedPrompts?: Array<{ q: string; label: string }> | null;
 }
 
-export function AiSheet({ open, onOpen, onClose, onCreateWidget, idToken, businessName, profile, onReportSaved, hideDock }: AiSheetProps) {
+export function AiSheet({ open, onOpen, onClose, onCreateWidget, idToken, businessName, profile, onReportSaved, hideDock, suggestedPrompts }: AiSheetProps) {
+  const suggested = suggestedPrompts?.length ? suggestedPrompts : SUGGESTED;
   const { messages, typing, blocked, usageNotice, send } = useAssistantChat({ idToken, onCreateWidget, onReportSaved, businessName, profile });
   const [fontLevel, setFontLevel] = useFontLevel();
   const [input, setInput] = useState("");
@@ -64,7 +67,7 @@ export function AiSheet({ open, onOpen, onClose, onCreateWidget, idToken, busine
           {messages.map((message) => <div className={`msg ${message.role}`} key={message.id}><div className="msg-avatar">{message.role === "ai" ? "IA" : "Tú"}</div><div className="msg-bubble"><ChatMessageContent message={message} businessName={businessName} /></div></div>)}
           {typing && <div className="msg ai"><div className="msg-avatar">IA</div><div className="msg-bubble"><div className="typing"><span /><span /><span /></div></div></div>}
         </div>
-        <div className="suggested">{SUGGESTED.map((item) => <button className="chip" key={item.q} onClick={() => ask(item.q)}>{item.label}</button>)}</div>
+        <div className="suggested">{suggested.map((item) => <button className="chip" key={item.q} onClick={() => ask(item.q)}>{item.label}</button>)}</div>
         <div className="ai-usage" role="status" style={{ fontSize: "calc(12px * var(--afs, 1))", padding: "0 16px 6px", opacity: 0.75 }}>{usageNotice}</div>
         <div className="ai-input-wrap">
           <textarea className="ai-input" rows={1} placeholder={blocked ? "Esperá un momento para volver a preguntar…" : "Preguntale a Innova sobre tu negocio…"} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); ask(input); } }} />

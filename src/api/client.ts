@@ -98,6 +98,8 @@ export interface ApiMe {
   profile?: ApiBusinessProfile | null;
   /** Interruptores de funciones en beta de este negocio. Ausente (backend anterior) = todo apagado. */
   features?: { advisorView?: boolean };
+  /** Prompts sugeridos propios de esta persona; null/ausente = los predeterminados del cliente. */
+  suggestedPrompts?: Array<{ q: string; label: string }> | null;
 }
 export type OnboardingAction = "start" | "defer" | "complete" | "complete-product-tour" | "create-starter-dashboard";
 export type ApiBusinessProfilePatch = {

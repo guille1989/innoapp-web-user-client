@@ -17,6 +17,8 @@ interface AiChatViewProps {
   profile?: ApiBusinessProfile | null;
   onReportSaved: () => void;
   /** Avisos del asesor del negocio; se muestran en la portada, antes de empezar a conversar. */
+  /** Prompts propios de esta persona (GET /me); sin ellos, los predeterminados. */
+  suggestedPrompts?: Array<{ q: string; label: string }> | null;
   attention?: { matters: ApiMatter[]; onMark: (id: string, status: "seen" | "dismissed") => void };
 }
 
@@ -24,7 +26,8 @@ interface AiChatViewProps {
 const isNarrow = () => typeof window !== "undefined" && window.matchMedia("(max-width: 760px)").matches;
 
 /** Vista IA: conversación a pantalla completa con Innova, con el historial de conversaciones al lado. */
-export function AiChatView({ active, onCreateWidget, idToken, businessName, profile, onReportSaved, attention }: AiChatViewProps) {
+export function AiChatView({ active, onCreateWidget, idToken, businessName, profile, onReportSaved, attention, suggestedPrompts }: AiChatViewProps) {
+  const suggested = suggestedPrompts?.length ? suggestedPrompts : SUGGESTED;
   const list = useConversationList(idToken);
   const { messages, typing, ready, blocked, usageNotice, activeId, send, startNewConversation, openConversation } = useAssistantChat({
     idToken, onCreateWidget, onReportSaved, persist: true, onConversationSaved: list.upsert, businessName, profile,
@@ -46,9 +49,9 @@ export function AiChatView({ active, onCreateWidget, idToken, businessName, prof
 
   useEffect(() => {
     if (!active || started || input) return;
-    const id = window.setInterval(() => setHint((i) => (i + 1) % SUGGESTED.length), 3500);
+    const id = window.setInterval(() => setHint((i) => (i + 1) % suggested.length), 3500);
     return () => window.clearInterval(id);
-  }, [active, started, input]);
+  }, [active, started, input, suggested.length]);
 
   // El textarea crece con el texto hasta su max-height.
   useEffect(() => {
@@ -126,7 +129,7 @@ export function AiChatView({ active, onCreateWidget, idToken, businessName, prof
         <div className="ai-chat-composer">
           {usageNotice && <div className="ai-chat-usage" role="status">{usageNotice}</div>}
           <div className="ai-chat-input glass">
-            <textarea ref={textareaRef} rows={1} placeholder={blocked ? "Esperá un momento para volver a preguntar…" : started ? "Preguntale a Innova sobre tu negocio…" : SUGGESTED[hint].q} aria-label="Mensaje para Innova" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); ask(input); } }} />
+            <textarea ref={textareaRef} rows={1} placeholder={blocked ? "Esperá un momento para volver a preguntar…" : started ? "Preguntale a Innova sobre tu negocio…" : suggested[hint % suggested.length].q} aria-label="Mensaje para Innova" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); ask(input); } }} />
             <div className="ai-chat-tools">
               <button className="ai-send" onClick={() => ask(input)} aria-label="Enviar" disabled={!input.trim() || typing || !ready}><IconSend /></button>
             </div>
