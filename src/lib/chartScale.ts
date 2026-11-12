@@ -1,13 +1,13 @@
 import { fmtAmount } from "../data/format";
 import { AGG_LABELS, FIELD_LABELS } from "../data/widgetLabels";
-import { effectiveTimeZone } from "./businessTimeZone";
 import { isHoliday } from "./holidays";
 import type { AggregateRow, Aggregation, Widget } from "../types";
 
 /**
  * Escalas, ticks y fechas compartidos por las gráficas de los widgets. Las
- * claves de día ("2026-10-13") son días de calendario del NEGOCIO (o del
- * navegador si no hay zona): el backend agrupa con advisor.timeZone / ?tz=.
+ * claves de día ("2026-10-13") son días UTC: así las arma el backend con
+ * `substr(capturedat, 1, 10)`, y todo lo de acá trabaja en UTC para no
+ * correr un día según la zona del navegador.
  */
 
 export type TimeGranularity = "day" | "week" | "month";
@@ -21,27 +21,23 @@ export const DAY_KEY = /^\d{4}-\d{2}-\d{2}$/;
  * fecha no hay datos que filtrar en el navegador.
  */
 export function dataFloorKey(): string {
-  const year = Number(localDateKey().slice(0, 4));
-  return `${year - 1}-01-01`;
+  return `${new Date().getUTCFullYear() - 1}-01-01`;
 }
 
 /**
- * Fecha local del negocio (`en-CA` → YYYY-MM-DD), o del navegador si no hay
- * zona configurada. `offsetDays` suma/resta días de calendario (no horas).
- * Debe coincidir con Ask / Athena (`advisor.timeZone`).
+ * Fecha LOCAL del navegador (`en-CA` da YYYY-MM-DD), `offsetDays` hacia atrás o adelante.
+ * El backend agrupa por día/hora en la zona del navegador (`?tz=`), así que "hoy"
+ * tiene que ser el de esa misma zona — con UTC, después de las 19:00 en Colombia
+ * "hoy" ya sería mañana.
  */
-export function localDateKey(offsetDays = 0, timeZone: string = effectiveTimeZone()): string {
-  const today = new Intl.DateTimeFormat("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
-  return offsetDays === 0 ? today : addDays(today, offsetDays);
+export function localDateKey(offsetDays = 0): string {
+  const date = new Date();
+  date.setDate(date.getDate() + offsetDays);
+  return new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
 }
 
-export function todayKey(timeZone?: string): string {
-  return localDateKey(0, timeZone ?? effectiveTimeZone());
+export function todayKey(): string {
+  return localDateKey();
 }
 
 function toDate(key: string): Date {

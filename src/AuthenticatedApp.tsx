@@ -67,9 +67,8 @@ export function AuthenticatedApp() {
   const [activeSheet, setActiveSheet] = useState<ActiveSheet>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [tourRun, setTourRun] = useState(0);
+  const cloud = useCloudData(idToken!);
   const onboarding = useOnboarding(idToken!);
-  // timeZone de /me alinea dateFrom/dateTo del tablero con Ask (zona del negocio).
-  const cloud = useCloudData(idToken!, onboarding.me?.timeZone);
   const reports = useReports(idToken!);
   const advisor = useAdvisorMatters(idToken!);
   const onboardingAct = onboarding.act;

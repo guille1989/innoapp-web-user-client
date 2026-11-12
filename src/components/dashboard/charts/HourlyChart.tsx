@@ -8,7 +8,7 @@ import type { Widget } from "../../../types";
 
 /**
  * Evolución hora por hora de hoy contra ayer. Las claves del backend son
- * "YYYY-MM-DD HH" en la zona del negocio (o ?tz= del navegador), así
+ * "YYYY-MM-DD HH" en la zona del navegador (`?tz=`, ver api/client.ts), así
  * que acá se comparan tal cual, sin pasar por Date. `useCloudData` solo pide
  * ayer y hoy para estos widgets.
  *

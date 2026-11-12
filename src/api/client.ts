@@ -1,5 +1,3 @@
-import { browserTimeZone } from "../lib/businessTimeZone";
-
 const API_URL = (import.meta.env?.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "");
 
 export interface ApiTicket {
@@ -102,11 +100,6 @@ export interface ApiMe {
   features?: { advisorView?: boolean };
   /** Prompts sugeridos propios de esta persona; null/ausente = los predeterminados del cliente. */
   suggestedPrompts?: Array<{ q: string; label: string }> | null;
-  /**
-   * Zona IANA del negocio (`advisor.timeZone`). null/ausente = sin zona: el
-   * dashboard cae al navegador, igual que Ask / dataHandler.
-   */
-  timeZone?: string | null;
 }
 export type OnboardingAction = "start" | "defer" | "complete" | "complete-product-tour" | "create-starter-dashboard";
 export type ApiBusinessProfilePatch = {
@@ -173,6 +166,15 @@ async function requestPublic<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!response.ok) return readErrorBody(response);
   return (await response.json()) as T;
+}
+
+/** Zona IANA del navegador ("America/Bogota"): el backend agrupa por día/hora local con ella. */
+function browserTimeZone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  } catch {
+    return "UTC";
+  }
 }
 
 export const api = {

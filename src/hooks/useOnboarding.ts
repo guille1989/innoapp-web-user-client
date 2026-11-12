@@ -1,15 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, type ApiBusinessProfile, type ApiBusinessProfilePatch, type ApiMe, type OnboardingAction } from "../api/client";
 import { configureAmountFormat } from "../data/format";
-import { configureBusinessTimeZone } from "../lib/businessTimeZone";
 import { useRequestScope } from "./useRequestScope";
 
-function applyMeConfig(me: ApiMe | null) {
+function applyAmountFormat(me: ApiMe | null) {
   configureAmountFormat({
     currency: me?.profile?.currency,
     locale: me?.profile?.locale,
   });
-  configureBusinessTimeZone(me?.timeZone);
 }
 
 export function useOnboarding(idToken: string) {
@@ -24,7 +22,7 @@ export function useOnboarding(idToken: string) {
       const result = await api.me(idToken, task.signal);
       if (!task.isCurrent()) return;
       setMe(result);
-      applyMeConfig(result);
+      applyAmountFormat(result);
       setError(null);
     } catch (err) {
       if (task.isCurrent()) setError(err instanceof Error ? err.message : String(err));
@@ -59,7 +57,7 @@ export function useOnboarding(idToken: string) {
       setMe((current) => {
         if (!current) return current;
         const next = { ...current, profile: result.profile };
-        applyMeConfig(next);
+        applyAmountFormat(next);
         return next;
       });
       return result.profile;

@@ -40,8 +40,7 @@ export function usePeriod() {
 
 /**
  * Fechas efectivas del período, o `null` para "Todo" (sin filtro). Se resuelve
- * al llamar: "Mes" sigue a "hoy" (zona del negocio vía `effectiveTimeZone`)
- * si la pestaña cruza la medianoche.
+ * al llamar: "Mes" sigue a "hoy" si la pestaña cruza la medianoche.
  */
 export function periodRange(period: PeriodFilter): { from: string; to: string } | null {
   if (period.preset === "all") return null;
