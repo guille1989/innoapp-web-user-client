@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { localDateKey } from "../lib/chartScale";
+import { configureBusinessTimeZone } from "../lib/businessTimeZone";
 import { periodRange, usePeriod, type PeriodFilter } from "../lib/periodFilter";
 import { api, type AgentLocation, type ApiActivationCode, type ApiAgent, type ApiTicket, type ApiWidget } from "../api/client";
 import { collectFailures, summarizeFailures } from "../lib/refreshFailures";
@@ -42,7 +43,11 @@ function mergeAgentsKeepingNewest(current: ApiAgent[], incoming: ApiAgent[]): Ap
   });
 }
 
-export function useCloudData(idToken: string) {
+/**
+ * `businessTimeZone` viene de GET /me: al llegar (o cambiar) se reconsulta el
+ * dashboard con dateFrom/dateTo en la zona del negocio, no la del navegador.
+ */
+export function useCloudData(idToken: string, businessTimeZone?: string | null) {
   const scope = useRequestScope(idToken);
   // `tickets` = los 100 más recientes (feed de actividad). `reviewTickets` = TODA la cola
   // `needs_review`, pedida por estado: filtrar los 100 recientes ocultaba los pendientes viejos.
@@ -83,6 +88,8 @@ export function useCloudData(idToken: string) {
   }, [idToken, scope]);
 
   const refresh = useCallback(async () => {
+    // Antes de armar dateFrom/dateTo: misma zona que Ask / Athena.
+    configureBusinessTimeZone(businessTimeZone);
     const task = scope.start("refresh");
     const agentTask = scope.start("agents");
     try {
@@ -177,7 +184,7 @@ export function useCloudData(idToken: string) {
       agentTask.finish();
       task.finish();
     }
-  }, [idToken, scope, period]);
+  }, [idToken, scope, period, businessTimeZone]);
 
   const latestRefresh = useRef(refresh);
   useEffect(() => { latestRefresh.current = refresh; }, [refresh]);
