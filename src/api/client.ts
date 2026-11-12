@@ -45,7 +45,7 @@ export interface ApiWidget {
   /** Solo KPI: segunda cifra que se muestra junto a la principal. */
   secondaryMetric?: { field: string; aggregation: "sum" | "avg" | "max" | "min" | "count" };
   groupBy?: string;
-  filters?: { dateFrom?: string; dateTo?: string; port?: string; agentId?: string; status?: ApiTicket["status"]; descriptionContains?: string; paymentMethod?: string };
+  filters?: { dateFrom?: string; dateTo?: string; port?: string; agentId?: string; status?: ApiTicket["status"]; descriptionContains?: string };
   createdAt: string;
 }
 export type ApiWidgetData = Array<{ label?: string; value: number | null; sampleCount?: number }>;

@@ -97,7 +97,6 @@ export function AuthenticatedApp() {
           : {}),
         agentId: w.filters?.agentId,
         descriptionContains: w.filters?.descriptionContains,
-        paymentMethod: w.filters?.paymentMethod,
         keyLabels: group === "agent" ? agentLabels : group === "hourOfDay" ? HOUR_OF_DAY_LABELS : group === "weekday" ? WEEKDAY_LABELS : undefined,
         data: cloud.widgetData[w.widgetId]?.flatMap((row) => row.value === null ? [] : [{ key: row.label ?? "total", value: row.value, sampleCount: row.sampleCount }]) ?? [],
         dataStatus: cloud.widgetStates[w.widgetId]?.status ?? "loading",
@@ -137,14 +136,8 @@ export function AuthenticatedApp() {
       metric: { field: cfg.field, aggregation: cfg.field === "event_count" ? "count" : cfg.agg },
       ...(cfg.secondaryField ? { secondaryMetric: { field: cfg.secondaryField, aggregation: cfg.secondaryField === "event_count" ? "count" : cfg.secondaryAgg ?? "sum" } } : {}),
       ...(cfg.group ? { groupBy: cfg.group } : {}),
-      ...(cfg.agentId || cfg.descriptionContains || cfg.paymentMethod
-        ? {
-            filters: {
-              ...(cfg.agentId ? { agentId: cfg.agentId } : {}),
-              ...(cfg.descriptionContains ? { descriptionContains: cfg.descriptionContains } : {}),
-              ...(cfg.paymentMethod ? { paymentMethod: cfg.paymentMethod } : {}),
-            },
-          }
+      ...(cfg.agentId || cfg.descriptionContains
+        ? { filters: { ...(cfg.agentId ? { agentId: cfg.agentId } : {}), ...(cfg.descriptionContains ? { descriptionContains: cfg.descriptionContains } : {}) } }
         : {}),
     });
   }

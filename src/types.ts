@@ -60,8 +60,6 @@ export interface Widget {
   agentId?: string;
   /** Limita el widget a los productos cuyo nombre contiene este texto. */
   descriptionContains?: string;
-  /** Limita el widget a ventas pagadas con este medio (Efectivo, QR, Datafono…). */
-  paymentMethod?: string;
   data?: AggregateRow[];
   dataStatus?: "loading" | "ready" | "error" | "stale";
   dataError?: string;
