@@ -34,7 +34,8 @@ export const SUGGESTED = [
 
 let msgSeq = 1;
 
-function draftToWidget(draft: ApiWidgetDraft): Omit<Widget, "id"> {
+/** Mapea el draft validado por Ask al shape local del dashboard (incluye paymentMethod). */
+export function draftToWidget(draft: ApiWidgetDraft): Omit<Widget, "id"> {
   return {
     type: draft.visualization,
     title: draft.name,
@@ -44,6 +45,7 @@ function draftToWidget(draft: ApiWidgetDraft): Omit<Widget, "id"> {
     ...(draft.secondaryMetric ? { secondaryField: draft.secondaryMetric.field as Widget["field"], secondaryAgg: draft.secondaryMetric.aggregation } : {}),
     ...(draft.filters?.agentId ? { agentId: draft.filters.agentId } : {}),
     ...(draft.filters?.descriptionContains ? { descriptionContains: draft.filters.descriptionContains } : {}),
+    ...(draft.filters?.paymentMethod ? { paymentMethod: draft.filters.paymentMethod } : {}),
   };
 }
 
