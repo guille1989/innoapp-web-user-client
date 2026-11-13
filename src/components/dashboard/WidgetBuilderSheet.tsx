@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AGG_LABELS, FIELD_LABELS, GROUP_LABELS } from "../../data/widgetLabels";
-import { IconBar, IconDonut, IconKpi, IconLine } from "../icons";
+import { IconBar, IconTable, IconDonut, IconKpi, IconLine } from "../icons";
 import type { ApiAgent } from "../../api/client";
 import type { Aggregation, AggregatableField, GroupField, Widget, WidgetType } from "../../types";
 
@@ -16,6 +16,7 @@ const TYPE_OPTIONS: Array<{ type: WidgetType; label: string; icon: () => React.R
   { type: "bar", label: "Barras", icon: IconBar },
   { type: "line", label: "Línea", icon: IconLine },
   { type: "donut", label: "Dona", icon: IconDonut },
+  { type: "table", label: "Tabla", icon: IconTable },
 ];
 
 const FIELD_OPTIONS: AggregatableField[] = ["event_count", "total", "quantity", "unitPrice", "subtotal", "discount", "tip", "tax"];
@@ -186,7 +187,7 @@ export function WidgetBuilderSheet({ open, onClose, onCreate, agents }: WidgetBu
               value={group}
               onChange={(e) => setGroup(e.target.value as GroupField)}
             >
-              {GROUP_OPTIONS.map((g) => (
+              {(type === "table" ? (["day", ...GROUP_OPTIONS] as GroupField[]) : GROUP_OPTIONS).map((g) => (
                 <option key={g} value={g}>
                   {GROUP_LABELS[g]}
                 </option>

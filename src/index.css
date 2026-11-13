@@ -478,3 +478,12 @@ button { border: 0; background: none; cursor: pointer; }
 @keyframes innova-caret { 50% { opacity: 0; } }
 @media (max-width: 560px) { .innova-chat { right: 16px; top: calc(68px + env(safe-area-inset-top) + 48px); } }
 @media (prefers-reduced-motion: reduce) { .innova-orb-btn { transition: none; } .innova-chat, .innova-chat-caret, .innova-chat-name i { animation: none; } }
+
+.widget-type-tag.table { background: rgba(var(--violet-rgb),.12); color: var(--violet); }
+.widget-table { height: 100%; display: flex; flex-direction: column; min-height: 0; }
+.widget-table-scroll { flex: 1; min-height: 0; overflow: auto; }
+.widget-table table { width: 100%; border-collapse: collapse; font-size: calc(11px * var(--wfs)); color: var(--chart-ink); }
+.widget-table th, .widget-table td { padding: calc(6px * var(--wfs)) 8px; text-align: left; border-bottom: 1px solid var(--chart-axis); white-space: nowrap; }
+.widget-table th { position: sticky; top: 0; background: var(--card, var(--bg, #fff)); color: var(--chart-ink-2); font-weight: 600; z-index: 1; }
+.widget-table td.n, .widget-table th.n { text-align: right; font-family: "JetBrains Mono", monospace; font-variant-numeric: tabular-nums; }
+.widget-table tfoot td { position: sticky; bottom: 0; background: var(--card, var(--bg, #fff)); font-weight: 700; border-top: 1px solid var(--chart-axis); border-bottom: 0; }

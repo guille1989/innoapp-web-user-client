@@ -6,6 +6,7 @@ import { BarChart } from "./charts/BarChart";
 import { DonutChart } from "./charts/DonutChart";
 import { HourlyChart } from "./charts/HourlyChart";
 import { LineChart } from "./charts/LineChart";
+import { WidgetTable } from "./charts/WidgetTable";
 import type { BusinessEvent, Widget } from "../../types";
 
 interface WidgetCardProps {
@@ -16,7 +17,7 @@ interface WidgetCardProps {
   onResizeStart: (e: React.PointerEvent) => void;
 }
 
-const TYPE_TAG: Record<Widget["type"], string> = { kpi: "KPI", bar: "Barras", line: "Línea", donut: "Dona" };
+const TYPE_TAG: Record<Widget["type"], string> = { kpi: "KPI", bar: "Barras", line: "Línea", donut: "Dona", table: "Tabla" };
 
 export function WidgetCard({ widget: w, onRemove, onDragStart, onResizeStart }: WidgetCardProps) {
   return (
@@ -41,6 +42,7 @@ export function WidgetCard({ widget: w, onRemove, onDragStart, onResizeStart }: 
             {w.type === "bar" && <BarChart widget={w} />}
             {w.type === "line" && (w.group === "hour" ? <HourlyChart widget={w} /> : <LineChart widget={w} />)}
             {w.type === "donut" && <DonutChart widget={w} />}
+            {w.type === "table" && <WidgetTable widget={w} />}
           </>
         )}
       </div>

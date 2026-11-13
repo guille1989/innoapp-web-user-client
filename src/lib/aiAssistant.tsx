@@ -80,7 +80,7 @@ export function parseWidgetIntent(q: string, previous?: string): WidgetIntent | 
 
   const agg: Aggregation = isAverage ? "avg" : "sum";
   const title =
-    (type === "kpi" ? "KPI: " : type === "bar" ? "Barras: " : type === "line" ? "Línea: " : "Dona: ") +
+    (type === "kpi" ? "KPI: " : type === "bar" ? "Barras: " : type === "line" ? "Línea: " : type === "table" ? "Tabla: " : "Dona: ") +
     (isAverage && field === "total" ? "Ticket medio" : FIELD_LABELS[field]) +
     (group ? ` por ${GROUP_LABELS[group].toLowerCase()}` : "");
 

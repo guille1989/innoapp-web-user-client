@@ -43,7 +43,7 @@ export type AggregatableField = "event_count" | "quantity" | "unitPrice" | "subt
 export type Aggregation = "sum" | "avg" | "max" | "min" | "count";
 export type GroupField = "port" | "agent" | "status" | "parsedBy" | "description" | "customer" | "paymentMethod" | "hourOfDay" | "weekday" | "day" | "hour";
 
-export type WidgetType = "kpi" | "bar" | "line" | "donut";
+export type WidgetType = "kpi" | "bar" | "line" | "donut" | "table";
 
 export interface Widget {
   id: string;

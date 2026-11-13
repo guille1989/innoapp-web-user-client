@@ -42,7 +42,7 @@ export interface ApiTicketImage { ticketId: string; width: number; height: numbe
 export interface ApiWidget {
   widgetId: string;
   name: string;
-  visualization: "kpi" | "bar" | "line" | "donut";
+  visualization: "kpi" | "bar" | "line" | "donut" | "table";
   metric: { field: string; aggregation: "sum" | "avg" | "max" | "min" | "count" };
   /** Solo KPI: segunda cifra que se muestra junto a la principal. */
   secondaryMetric?: { field: string; aggregation: "sum" | "avg" | "max" | "min" | "count" };

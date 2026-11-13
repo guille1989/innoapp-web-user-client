@@ -96,6 +96,15 @@ export function IconKpi() {
   );
 }
 
+export function IconTable() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="4" y="5" width="16" height="14" />
+      <path d="M4 10h16M4 14.5h16M12 10v9" />
+    </svg>
+  );
+}
+
 export function IconBar() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
