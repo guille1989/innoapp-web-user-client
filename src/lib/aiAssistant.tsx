@@ -13,6 +13,8 @@ const KPI_RE = /kpi|kipi|indicador/;
 
 // "Ticket medio" / "promedio" es un promedio del total, no una suma ni un conteo.
 const AVG_RE = /ticket\s+(medio|promedio)|promedio|\bmedia\b|\bmedio\b/;
+// "Ticket medio/promedio" es el promedio POR TICKET; "promedio de ventas" a secas es el diario.
+const TICKET_AVG_RE = /ticket\s+(medio|promedio)/;
 const FIELD_RE = /venta|monto|ingreso|total|item|ítem|art[ií]culo|cantidad|descuento|propina|ticket/;
 const GROUP_RE = /agente|robot|puerto|perif[eé]rico|estado|parser|parseo|producto|descripci[oó]n/;
 
@@ -78,10 +80,13 @@ export function parseWidgetIntent(q: string, previous?: string): WidgetIntent | 
   if (type === "line") group = wantsHourly ? "hour" : "day";
   else if (type !== "kpi" && !group) group = "agent";
 
-  const agg: Aggregation = isAverage ? "avg" : "sum";
+  // Un KPI de "promedio de ventas" es la venta promedio por día (suma del período ÷ días); solo un KPI
+  // admite esa agregación. Las demás gráficas y "ticket medio" siguen siendo promedio por ticket.
+  const dailyAverage = type === "kpi" && isAverage && field === "total" && !TICKET_AVG_RE.test(q);
+  const agg: Aggregation = dailyAverage ? "daily_avg" : isAverage ? "avg" : "sum";
   const title =
     (type === "kpi" ? "KPI: " : type === "bar" ? "Barras: " : type === "line" ? "Línea: " : "Dona: ") +
-    (isAverage && field === "total" ? "Ticket medio" : FIELD_LABELS[field]) +
+    (dailyAverage ? "Promedio de ventas" : isAverage && field === "total" ? "Ticket medio" : FIELD_LABELS[field]) +
     (group ? ` por ${GROUP_LABELS[group].toLowerCase()}` : "");
 
   return { type, field, agg, group, title };
