@@ -21,6 +21,8 @@ const TYPE_OPTIONS: Array<{ type: WidgetType; label: string; icon: () => React.R
 
 const FIELD_OPTIONS: AggregatableField[] = ["event_count", "total", "quantity", "unitPrice", "subtotal", "discount", "tip", "tax"];
 const AGG_OPTIONS: Aggregation[] = ["sum", "avg", "max", "min", "count"];
+// Solo un KPI es un número solo: dividir cada barra o punto por los días del período no tendría sentido.
+const KPI_AGG_OPTIONS: Aggregation[] = [...AGG_OPTIONS, "daily_avg"];
 const GROUP_OPTIONS: GroupField[] = ["port", "agent", "status", "parsedBy", "description", "customer", "paymentMethod", "hourOfDay", "weekday"];
 
 export function WidgetBuilderSheet({ open, onClose, onCreate, agents }: WidgetBuilderSheetProps) {
@@ -87,7 +89,7 @@ export function WidgetBuilderSheet({ open, onClose, onCreate, agents }: WidgetBu
                 key={t}
                 type="button"
                 className={`type-opt${type === t ? " selected" : ""}`}
-                onClick={() => setType(t)}
+                onClick={() => { setType(t); if (t !== "kpi" && agg === "daily_avg") setAgg("sum"); }}
               >
                 <Icon />
                 {label}
@@ -134,7 +136,7 @@ export function WidgetBuilderSheet({ open, onClose, onCreate, agents }: WidgetBu
               Agregación
             </label>
             <select id="wAgg" className="select" value={agg} onChange={(e) => setAgg(e.target.value as Aggregation)}>
-              {AGG_OPTIONS.map((a) => (
+              {(type === "kpi" ? KPI_AGG_OPTIONS : AGG_OPTIONS).map((a) => (
                 <option key={a} value={a}>
                   {AGG_LABELS[a]}
                 </option>

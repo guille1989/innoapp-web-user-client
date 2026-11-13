@@ -43,9 +43,9 @@ export interface ApiWidget {
   widgetId: string;
   name: string;
   visualization: "kpi" | "bar" | "line" | "donut" | "table";
-  metric: { field: string; aggregation: "sum" | "avg" | "max" | "min" | "count" };
+  metric: { field: string; aggregation: "sum" | "avg" | "max" | "min" | "count" | "daily_avg" };
   /** Solo KPI: segunda cifra que se muestra junto a la principal. */
-  secondaryMetric?: { field: string; aggregation: "sum" | "avg" | "max" | "min" | "count" };
+  secondaryMetric?: { field: string; aggregation: "sum" | "avg" | "max" | "min" | "count" | "daily_avg" };
   groupBy?: string;
   filters?: { dateFrom?: string; dateTo?: string; port?: string; agentId?: string; status?: ApiTicket["status"]; descriptionContains?: string; paymentMethod?: string };
   createdAt: string;

@@ -17,6 +17,7 @@ export const AGG_LABELS: Record<Aggregation, string> = {
   max: "Máximo",
   min: "Mínimo",
   count: "Conteo",
+  daily_avg: "Promedio diario",
 };
 
 export const GROUP_LABELS: Record<GroupField, string> = {
