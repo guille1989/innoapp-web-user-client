@@ -109,7 +109,7 @@ export function unitStartMonth(unit: CalendarUnit, monthKey: string): string {
 }
 
 /** Último día del mes/trimestre/semestre que arranca en `anchor` (`YYYY-MM`). */
-function unitEndKey(unit: CalendarUnit, anchor: string): string {
+export function unitEndKey(unit: CalendarUnit, anchor: string): string {
   return addDays(`${shiftMonths(anchor, UNIT_MONTHS[unit])}-01`, -1);
 }
 

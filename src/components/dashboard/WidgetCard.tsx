@@ -1,6 +1,6 @@
 import { formatWidgetValue } from "../../lib/aggregate";
 import { AGG_LABELS, FIELD_LABELS } from "../../data/widgetLabels";
-import { usePeriod } from "../../lib/periodFilter";
+import { periodProjection, usePeriod } from "../../lib/periodFilter";
 import { IconTrash } from "../icons";
 import { BarChart } from "./charts/BarChart";
 import { DonutChart } from "./charts/DonutChart";
@@ -56,5 +56,7 @@ function KpiBody({ widget: w }: { widget: Widget }) {
   const value = w.data?.[0]?.value;
   if (value === undefined) return <span className="widget-empty">{period.preset === "all" ? "Sin datos para esta métrica" : "Sin datos en este período"}</span>;
   const secondary = w.secondaryField ? w.secondaryData?.[0]?.value : undefined;
-  return <div className="kpi-body"><div className="kpi-value mono">{formatWidgetValue(w.field, value)}{secondary !== undefined && w.secondaryField && <span className="kpi-secondary"> / {formatWidgetValue(w.secondaryField, secondary)} {w.secondaryField === "quantity" ? "unidades" : FIELD_LABELS[w.secondaryField].toLowerCase()}</span>}</div><div className="kpi-sub"><span className="trend-dot" />{w.field === "event_count" ? "conteo" : AGG_LABELS[w.agg].toLowerCase()} · {w.dataStatus === "stale" ? "último resultado válido" : w.dataLabel ?? "datos confirmados"}</div></div>;
+  // Promedio diario × días del período completo: proyección lineal (supone que cada día vende igual).
+  const projection = w.agg === "daily_avg" ? periodProjection(period) : null;
+  return <div className="kpi-body"><div className="kpi-value mono">{formatWidgetValue(w.field, value)}{secondary !== undefined && w.secondaryField && <span className="kpi-secondary"> / {formatWidgetValue(w.secondaryField, secondary)} {w.secondaryField === "quantity" ? "unidades" : FIELD_LABELS[w.secondaryField].toLowerCase()}</span>}</div>{projection && <div className="kpi-projection">Proyección del {projection.noun} · <span className="mono">{formatWidgetValue(w.field, value * projection.days)}</span></div>}<div className="kpi-sub"><span className="trend-dot" />{w.field === "event_count" ? "conteo" : AGG_LABELS[w.agg].toLowerCase()} · {w.dataStatus === "stale" ? "último resultado válido" : w.dataLabel ?? "datos confirmados"}</div></div>;
 }

@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { isCalendarUnit, RANGE_LABELS, resolveRange, shortRangeLabel, tickLabel, UNIT_MONTHS, type CalendarUnit, type RangePreset } from "./chartScale";
+import { isCalendarUnit, RANGE_LABELS, resolveRange, shortRangeLabel, tickLabel, todayKey, unitEndKey, unitStartMonth, UNIT_MONTHS, type CalendarUnit, type RangePreset } from "./chartScale";
 
 /**
  * Período de tiempo que comparten todos los widgets de la vista de Datos. Es
@@ -46,6 +46,26 @@ export function usePeriod() {
 export function periodRange(period: PeriodFilter): { from: string; to: string } | null {
   if (period.preset === "all") return null;
   return resolveRange(period.preset, period, undefined, undefined);
+}
+
+const UNIT_NOUN: Record<CalendarUnit, string> = { month: "mes", quarter: "trimestre", semester: "semestre" };
+
+/**
+ * Para la proyección lineal de un KPI de promedio diario: cuántos días tiene el
+ * mes/trimestre/semestre COMPLETO elegido (no solo los transcurridos). `null`
+ * con Hoy, 7/30/90 días, Semana, Todo o un rango personalizado: no hay un
+ * "período completo" que proyectar.
+ */
+export function periodProjection(period: PeriodFilter): { days: number; noun: string } | null {
+  if (!isCalendarUnit(period.preset)) return null;
+  const unit = period.preset;
+  const currentAnchor = unitStartMonth(unit, todayKey().slice(0, 7));
+  // Un `anchor` igual o posterior al período en curso se ignora (como en resolveRange): vale el actual.
+  const anchor = period.anchor && /^\d{4}-\d{2}$/.test(period.anchor) && period.anchor < currentAnchor ? unitStartMonth(unit, period.anchor) : currentAnchor;
+  const first = `${anchor}-01`;
+  const end = unitEndKey(unit, anchor);
+  const days = (Date.parse(`${end}T00:00:00Z`) - Date.parse(`${first}T00:00:00Z`)) / 86_400_000 + 1;
+  return { days, noun: UNIT_NOUN[unit] };
 }
 
 const MONTH_NAME = new Intl.DateTimeFormat("es-ES", { month: "long", year: "numeric", timeZone: "UTC" });
