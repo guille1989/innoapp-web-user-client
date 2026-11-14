@@ -23,7 +23,7 @@ const FIELD_OPTIONS: AggregatableField[] = ["event_count", "total", "quantity", 
 const AGG_OPTIONS: Aggregation[] = ["sum", "avg", "max", "min", "count"];
 // Solo un KPI es un número solo: dividir cada barra o punto por los días del período no tendría sentido.
 const KPI_AGG_OPTIONS: Aggregation[] = [...AGG_OPTIONS, "daily_avg"];
-const GROUP_OPTIONS: GroupField[] = ["port", "agent", "status", "parsedBy", "description", "customer", "paymentMethod", "hourOfDay", "weekday"];
+const GROUP_OPTIONS: GroupField[] = ["port", "agent", "status", "parsedBy", "description", "customer", "seller", "paymentMethod", "hourOfDay", "weekday"];
 
 export function WidgetBuilderSheet({ open, onClose, onCreate, agents }: WidgetBuilderSheetProps) {
   const [type, setType] = useState<WidgetType>("kpi");

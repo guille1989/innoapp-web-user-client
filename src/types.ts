@@ -42,7 +42,7 @@ export type BusinessEvent = VentaEvent | DevolucionEvent | AperturaCajaEvent;
 export type AggregatableField = "event_count" | "quantity" | "unitPrice" | "subtotal" | "discount" | "tip" | "tax" | "total";
 /** "daily_avg": suma del período ÷ días del período (lo divide el backend); solo en KPIs. */
 export type Aggregation = "sum" | "avg" | "max" | "min" | "count" | "daily_avg";
-export type GroupField = "port" | "agent" | "status" | "parsedBy" | "description" | "customer" | "paymentMethod" | "hourOfDay" | "weekday" | "day" | "hour";
+export type GroupField = "port" | "agent" | "status" | "parsedBy" | "description" | "customer" | "seller" | "paymentMethod" | "hourOfDay" | "weekday" | "day" | "hour";
 
 export type WidgetType = "kpi" | "bar" | "line" | "donut" | "table";
 

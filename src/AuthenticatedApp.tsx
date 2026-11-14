@@ -22,7 +22,7 @@ import type { BusinessEvent, Robot, Widget } from "./types";
 
 type ActiveSheet = "ai" | "builder" | "profile" | null;
 const VALID_FIELDS = new Set<Widget["field"]>(["event_count", "quantity", "unitPrice", "subtotal", "discount", "tip", "tax", "total"]);
-const VALID_GROUPS = new Set<NonNullable<Widget["group"]>>(["port", "agent", "status", "parsedBy", "description", "paymentMethod", "hourOfDay", "weekday", "day", "hour"]);
+const VALID_GROUPS = new Set<NonNullable<Widget["group"]>>(["port", "agent", "status", "parsedBy", "description", "customer", "seller", "paymentMethod", "hourOfDay", "weekday", "day", "hour"]);
 
 /** El backend devuelve la hora del día como "00"–"23" y el día de la semana como "1" (lunes)–"7": se muestran legibles. */
 const HOUR_OF_DAY_LABELS: Record<string, string> = Object.fromEntries(Array.from({ length: 24 }, (_, h) => [String(h).padStart(2, "0"), `${String(h).padStart(2, "0")}:00`]));

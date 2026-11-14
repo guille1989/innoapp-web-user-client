@@ -20,6 +20,7 @@ const GROUP_KEY: Record<GroupField, (e: BusinessEvent) => string> = {
   parsedBy: () => "Sin dato",
   description: () => "Sin dato",
   customer: () => "Sin dato",
+  seller: () => "Sin dato",
   paymentMethod: (e) => (e.eventType === "venta" && e.medioPago) || "Sin dato",
   // Mismas claves que el backend: hora "00"–"23" y día ISO de la semana "1" (lunes)–"7" (domingo).
   hourOfDay: (e) => String(new Date(e.ts).getHours()).padStart(2, "0"),
